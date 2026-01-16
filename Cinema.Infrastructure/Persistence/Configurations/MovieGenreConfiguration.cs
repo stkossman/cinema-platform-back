@@ -1,3 +1,4 @@
+using Cinema.Domain.Common;
 using Cinema.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -8,13 +9,20 @@ public class MovieGenreConfiguration : IEntityTypeConfiguration<MovieGenre>
 {
     public void Configure(EntityTypeBuilder<MovieGenre> builder)
     {
-        builder.HasKey(mg => new { mg.MovieId, mg.GenreId });
-        builder.HasOne(mg => mg.Movie)
-            .WithMany(m => m.MovieGenres)
-            .HasForeignKey(mg => mg.MovieId);
+        builder.HasKey(x => new { x.MovieId, x.GenreId });
+        
+        builder.Property(x => x.MovieId).HasConversion(x => x.Value, x => new EntityId<Movie>(x));
+        builder.HasOne(x => x.Movie)
+            .WithMany(x => x.MovieGenres)
+            .HasForeignKey(x => x.MovieId)
+            .OnDelete(DeleteBehavior.Cascade);
+        
+        
+        builder.Property(x => x.GenreId).HasConversion(x => x.Value, x => new EntityId<Genre>(x));
+        builder.HasOne(x => x.Genre)
+            .WithMany(x => x.MovieGenres)
+            .HasForeignKey(x => x.GenreId)
+            .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasOne(mg => mg.Genre)
-            .WithMany(g => g.MovieGenres)
-            .HasForeignKey(mg => mg.GenreId);
     }
 }
