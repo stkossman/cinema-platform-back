@@ -1,5 +1,7 @@
 using System.Reflection;
+using Cinema.Application.Common.Interfaces;
 using Cinema.Domain.Entities;
+using Cinema.Infrastructure.Persistence.Converters;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -8,7 +10,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 namespace Cinema.Infrastructure.Persistence;
 
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-    : IdentityDbContext<User, IdentityRole<Guid>, Guid>(options)
+    : IdentityDbContext<User, IdentityRole<Guid>, Guid>(options), IApplicationDbContext
 {
     public DbSet<Movie> Movies { get; init; }
     public DbSet<MovieGenre> MovieGenres { get; init; }
@@ -33,6 +35,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public async Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken)
     {
         return await Database.BeginTransactionAsync(cancellationToken);
+    }
+    
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder.Properties<DateTime>()
+            .HaveConversion<DateTimeUtcConverter>();
     }
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)

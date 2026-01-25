@@ -1,6 +1,7 @@
-﻿using Cinema.Application.Common.Settings;
+﻿using Cinema.Application.Common.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 
@@ -8,12 +9,11 @@ namespace Cinema.Infrastructure.Persistence;
 
 public static class ConfigurePersistenceServices
 {
-    public static void AddPersistenceServices(this IServiceCollection services)
+    public static IServiceCollection AddPersistenceServices(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddDbContext<ApplicationDbContext>((provider, options) =>
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        services.AddDbContext<ApplicationDbContext>((sp, options) =>
         {
-            var settings = provider.GetRequiredService<ApplicationSettings>();
-            var connectionString = settings?.ConnectionStrings?.DefaultConnection;
             var dataSource = new NpgsqlDataSourceBuilder(connectionString)
                 .EnableDynamicJson()
                 .Build();
@@ -25,10 +25,10 @@ public static class ConfigurePersistenceServices
                 .ConfigureWarnings(w => w.Ignore(CoreEventId.ManyServiceProvidersCreatedWarning));
         });
         services.AddScoped<ApplicationDbContextInitializer>();
-        services.AddRepositories();
-    }
+        services.AddScoped<IApplicationDbContext>(provider => 
+            provider.GetRequiredService<ApplicationDbContext>());
 
-    private static void AddRepositories(this IServiceCollection services)
-    {
+        return services;
     }
 }
+

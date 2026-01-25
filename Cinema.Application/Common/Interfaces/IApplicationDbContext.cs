@@ -12,7 +12,7 @@ public interface IApplicationDbContext
     DbSet<Session> Sessions { get; }
     DbSet<Movie> Movies { get; }
     DbSet<Genre> Genres { get; }
-    DbSet<Pricing> Pricing { get; }
+    DbSet<Pricing> Pricings { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
     Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken);
 }
