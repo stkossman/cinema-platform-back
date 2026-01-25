@@ -1,5 +1,4 @@
 ﻿using Cinema.Application.Common.Interfaces;
-using Cinema.Infrastructure.Persistence; // Переконайтеся, що namespace вірний
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
