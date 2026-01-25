@@ -1,5 +1,6 @@
 using Cinema.Application.Sessions.Commands.CancelSession;
 using Cinema.Application.Sessions.Commands.CreateSession;
+using Cinema.Application.Sessions.Commands.RescheduleSession;
 using Cinema.Application.Sessions.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -35,6 +36,25 @@ public class SessionsController : ControllerBase
     public async Task<IActionResult> Cancel(Guid id)
     {
         var command = new CancelSessionCommand(id);
+        var result = await _mediator.Send(command);
+
+        if (result.IsFailure)
+        {
+            return BadRequest(new { result.Error.Code, result.Error.Description });
+        }
+
+        return NoContent();
+    }
+    
+    // PUT: api/sessions/{id}/reschedule
+    [HttpPut("{id:guid}/reschedule")]
+    public async Task<IActionResult> Reschedule(Guid id, [FromBody] RescheduleSessionCommand command)
+    {
+        if (id != command.SessionId)
+        {
+            return BadRequest("ID mismatch");
+        }
+
         var result = await _mediator.Send(command);
 
         if (result.IsFailure)
