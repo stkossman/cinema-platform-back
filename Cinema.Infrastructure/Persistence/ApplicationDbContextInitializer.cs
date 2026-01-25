@@ -150,6 +150,21 @@ public class ApplicationDbContextInitializer(
                     seats.Add(seat);
                 }
             }
+            
+            // (Technologies)
+            if (!dbContext.Technologies.Any())
+            {
+                dbContext.Technologies.AddRange(new List<Technology>
+                {
+                    Technology.New(new EntityId<Technology>(Guid.Parse("88888888-8888-8888-8888-888888888888")), "IMAX", "Visual"),
+                    Technology.New(new EntityId<Technology>(Guid.Parse("99999999-9999-9999-9999-999999999999")), "Dolby Atmos", "Audio"),
+                    Technology.New(new EntityId<Technology>(Guid.Parse("77777777-7777-7777-7777-777777777777")), "3D", "Visual"),
+                    Technology.New(new EntityId<Technology>(Guid.Parse("66666666-6666-6666-6666-666666666666")), "4DX", "Experience")
+                });
+
+                await dbContext.SaveChangesAsync();
+            }
+            
 
             dbContext.Seats.AddRange(seats);
             await dbContext.SaveChangesAsync();

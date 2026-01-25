@@ -34,13 +34,13 @@ public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TReques
 
         if (failures.Any())
         {
-            return CreateValidationResult<TResponse>(failures);
+            return CreateValidationResult(failures);
         }
 
         return await next();
     }
-
-    private TResponse CreateValidationResult<TResponse>(List<FluentValidation.Results.ValidationFailure> failures)
+    
+    private TResponse CreateValidationResult(List<FluentValidation.Results.ValidationFailure> failures)
     {
         var type = typeof(TResponse);
         

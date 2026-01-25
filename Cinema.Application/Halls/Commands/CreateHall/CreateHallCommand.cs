@@ -7,5 +7,6 @@ public record CreateHallCommand(
     string Name,
     int Rows,
     int SeatsPerRow,
-    Guid SeatTypeId
+    Guid SeatTypeId,
+    List<Guid> TechnologyIds
 ) : IRequest<Result<Guid>>;

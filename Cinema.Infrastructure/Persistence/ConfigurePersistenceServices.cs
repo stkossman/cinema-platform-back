@@ -1,4 +1,5 @@
 ﻿using Cinema.Application.Common.Interfaces;
+using Cinema.Infrastructure.Persistence; // Переконайтеся, що namespace вірний
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
@@ -12,18 +13,23 @@ public static class ConfigurePersistenceServices
     public static IServiceCollection AddPersistenceServices(this IServiceCollection services, IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection");
+        var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+        dataSourceBuilder.EnableDynamicJson();
+        var dataSource = dataSourceBuilder.Build();
+        
+        services.AddSingleton(dataSource);
+
         services.AddDbContext<ApplicationDbContext>((sp, options) =>
         {
-            var dataSource = new NpgsqlDataSourceBuilder(connectionString)
-                .EnableDynamicJson()
-                .Build();
+            var existingDataSource = sp.GetRequiredService<NpgsqlDataSource>();
 
             options
-                .UseNpgsql(dataSource,
+                .UseNpgsql(existingDataSource,
                     builder => { builder.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName); })
                 .UseSnakeCaseNamingConvention()
                 .ConfigureWarnings(w => w.Ignore(CoreEventId.ManyServiceProvidersCreatedWarning));
         });
+
         services.AddScoped<ApplicationDbContextInitializer>();
         services.AddScoped<IApplicationDbContext>(provider => 
             provider.GetRequiredService<ApplicationDbContext>());
@@ -31,4 +37,3 @@ public static class ConfigurePersistenceServices
         return services;
     }
 }
-

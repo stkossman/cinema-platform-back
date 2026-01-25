@@ -9,9 +9,9 @@ public class Hall
     public string Name { get; private set; }
     public int TotalCapacity { get; private set; }
 
-    public ICollection<Seat>? Seats { get; private set; } = [];
-    public ICollection<Session>? Sessions { get; private set; } = [];
-    public ICollection<HallTechnology>? Technologies { get; private set; } = [];
+    public ICollection<Seat> Seats { get; private set; } = [];
+    public ICollection<Session> Sessions { get; private set; } = [];
+    public ICollection<HallTechnology> Technologies { get; private set; } = [];
     public bool IsActive { get; private set; } = true;
 
     private Hall(

@@ -26,5 +26,6 @@ public class HallTechnologyConfiguration : IEntityTypeConfiguration<HallTechnolo
             .WithMany()
             .HasForeignKey(x => x.TechnologyId)
             .OnDelete(DeleteBehavior.Cascade);
+        builder.HasQueryFilter(ht => ht.Hall!.IsActive);
     }
 }
