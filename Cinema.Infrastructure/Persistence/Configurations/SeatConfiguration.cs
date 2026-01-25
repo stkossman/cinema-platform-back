@@ -39,5 +39,6 @@ public class SeatConfiguration : IEntityTypeConfiguration<Seat>
             .WithMany()
             .HasForeignKey(x => x.SeatTypeId)
             .OnDelete(DeleteBehavior.Restrict);
+        builder.HasQueryFilter(s => s.Hall!.IsActive);
     }
 }

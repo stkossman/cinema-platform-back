@@ -44,5 +44,6 @@ public class TicketConfiguration : IEntityTypeConfiguration<Ticket>
             .WithMany()
             .HasForeignKey(x => x.SeatId)
             .OnDelete(DeleteBehavior.Restrict);
+        builder.HasQueryFilter(t => t.Seat!.Hall!.IsActive);
     }
 }

@@ -60,7 +60,9 @@ namespace Cinema.Infrastructure.Persistence.Migrations
                         .HasColumnName("id");
 
                     b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
+                        .HasDefaultValue(true)
                         .HasColumnName("is_active");
 
                     b.Property<string>("Name")

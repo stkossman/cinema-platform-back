@@ -47,6 +47,5 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     {
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
         base.OnModelCreating(modelBuilder);
-        modelBuilder.Entity<Hall>().HasQueryFilter(h => h.IsActive);
     }
 }

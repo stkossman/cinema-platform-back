@@ -32,7 +32,7 @@ public class SessionConfiguration : IEntityTypeConfiguration<Session>
         builder.HasOne(x => x.Hall)
             .WithMany(x => x.Sessions)
             .HasForeignKey(x => x.HallId)
-            .OnDelete(DeleteBehavior.Restrict); // Краще Restrict, щоб не видалити зал з сеансами
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.Property(x => x.MovieId)
             .HasConversion(x => x.Value, x => new EntityId<Movie>(x));
@@ -49,5 +49,6 @@ public class SessionConfiguration : IEntityTypeConfiguration<Session>
             .WithMany()
             .HasForeignKey(x => x.PricingId)
             .OnDelete(DeleteBehavior.Restrict);
+        builder.HasQueryFilter(s => s.Hall!.IsActive);
     }
 }
