@@ -1,6 +1,7 @@
-﻿using Cinema.Application.Common.Settings;
+﻿using Cinema.Application.Common.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 
@@ -8,27 +9,30 @@ namespace Cinema.Infrastructure.Persistence;
 
 public static class ConfigurePersistenceServices
 {
-    public static void AddPersistenceServices(this IServiceCollection services)
+    public static IServiceCollection AddPersistenceServices(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddDbContext<ApplicationDbContext>((provider, options) =>
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+        dataSourceBuilder.EnableDynamicJson();
+        var dataSource = dataSourceBuilder.Build();
+        
+        services.AddSingleton(dataSource);
+
+        services.AddDbContext<ApplicationDbContext>((sp, options) =>
         {
-            var settings = provider.GetRequiredService<ApplicationSettings>();
-            var connectionString = settings?.ConnectionStrings?.DefaultConnection;
-            var dataSource = new NpgsqlDataSourceBuilder(connectionString)
-                .EnableDynamicJson()
-                .Build();
+            var existingDataSource = sp.GetRequiredService<NpgsqlDataSource>();
 
             options
-                .UseNpgsql(dataSource,
+                .UseNpgsql(existingDataSource,
                     builder => { builder.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName); })
                 .UseSnakeCaseNamingConvention()
                 .ConfigureWarnings(w => w.Ignore(CoreEventId.ManyServiceProvidersCreatedWarning));
         });
-        services.AddScoped<ApplicationDbContextInitializer>();
-        services.AddRepositories();
-    }
 
-    private static void AddRepositories(this IServiceCollection services)
-    {
+        services.AddScoped<ApplicationDbContextInitializer>();
+        services.AddScoped<IApplicationDbContext>(provider => 
+            provider.GetRequiredService<ApplicationDbContext>());
+
+        return services;
     }
 }

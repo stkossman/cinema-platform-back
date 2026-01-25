@@ -1,5 +1,6 @@
 using Cinema.Domain.Common;
 using Cinema.Domain.Enums;
+using Cinema.Domain.Exceptions;
 
 namespace Cinema.Domain.Entities;
 
@@ -50,4 +51,36 @@ public class Session
         EntityId<Hall> hallId,
         EntityId<Pricing> pricingId
     ) => new(id, startTime, endTime, status, movieId, hallId, pricingId);
+    
+    public void Cancel(DateTime cancellationTime)
+    {
+        if (Status == SessionStatus.Cancelled) return;
+        if (StartTime < cancellationTime)
+        {
+            throw new DomainException("Cannot cancel a session that has already started.");
+        }
+
+        Status = SessionStatus.Cancelled;
+    }
+    
+    public void Reschedule(DateTime newStartTime, DateTime newEndTime)
+    {
+        if (Status == SessionStatus.Cancelled)
+        {
+            throw new DomainException("Cannot reschedule a cancelled session.");
+        }
+
+        if (newStartTime < DateTime.UtcNow)
+        {
+            throw new DomainException("Cannot reschedule to the past.");
+        }
+        
+        if (StartTime < DateTime.UtcNow)
+        {
+            throw new DomainException("Cannot reschedule a session that has already started.");
+        }
+
+        StartTime = newStartTime;
+        EndTime = newEndTime;
+    }
 }

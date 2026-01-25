@@ -1,12 +1,14 @@
 ﻿using Cinema.Infrastructure.Persistence;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cinema.Infrastructure;
 
 public static class ConfigureInfrastructureServices
 {
-    public static void AddInfrastructureServices(this IServiceCollection services)
+    public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddPersistenceServices();
+        services.AddPersistenceServices(configuration);
+        return services;
     }
 }

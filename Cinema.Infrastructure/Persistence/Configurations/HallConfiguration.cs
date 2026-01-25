@@ -20,5 +20,9 @@ public class HallConfiguration : IEntityTypeConfiguration<Hall>
 
         builder.Property(x => x.TotalCapacity)
             .IsRequired();
+        builder.Property(x => x.IsActive)
+            .HasDefaultValue(true);
+        builder.Property(x => x.IsActive).HasDefaultValue(true).IsRequired();
+        builder.HasQueryFilter(h => h.IsActive);
     }
 }

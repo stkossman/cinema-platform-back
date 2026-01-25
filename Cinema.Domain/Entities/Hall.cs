@@ -1,4 +1,5 @@
 using Cinema.Domain.Common;
+using Cinema.Domain.Exceptions;
 
 namespace Cinema.Domain.Entities;
 
@@ -8,9 +9,10 @@ public class Hall
     public string Name { get; private set; }
     public int TotalCapacity { get; private set; }
 
-    public ICollection<Seat>? Seats { get; private set; } = [];
-    public ICollection<Session>? Sessions { get; private set; } = [];
-    public ICollection<HallTechnology>? Technologies { get; private set; } = [];
+    public ICollection<Seat> Seats { get; private set; } = [];
+    public ICollection<Session> Sessions { get; private set; } = [];
+    public ICollection<HallTechnology> Technologies { get; private set; } = [];
+    public bool IsActive { get; private set; } = true;
 
     private Hall(
         EntityId<Hall> id,
@@ -26,7 +28,26 @@ public class Hall
     {
         return new(id, name, totalCapacity)
         {
-            Technologies = technologies
+            Technologies = technologies,
+            IsActive = true
         };
+    }
+    public void Update(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new DomainException("Hall name cannot be empty.");
+        }
+        
+        Name = name;
+    }
+    
+    public void Deactivate()
+    {
+        if (!IsActive)
+        {
+            return;
+        }
+        IsActive = false;
     }
 }

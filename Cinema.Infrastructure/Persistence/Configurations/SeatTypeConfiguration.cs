@@ -20,5 +20,6 @@ public class SeatTypeConfiguration : IEntityTypeConfiguration<SeatType>
 
         builder.Property(x => x.Description)
             .HasMaxLength(500);
+        
     }
 }

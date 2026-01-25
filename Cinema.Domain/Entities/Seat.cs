@@ -48,4 +48,9 @@ public class Seat
         EntityId<SeatType> seatTypeId) => new(id, rowLabel, number, gridX, gridY, status, hallId, seatTypeId);
 
     public void UpdateStatus(SeatStatus status) => Status = status;
+    
+    public void ChangeType(EntityId<SeatType> newSeatTypeId)
+    {
+        SeatTypeId = newSeatTypeId;
+    }
 }
