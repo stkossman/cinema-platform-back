@@ -1,4 +1,5 @@
 using Cinema.Application.Seats.Commands;
+using Cinema.Application.Seats.Commands.BatchChangeSeatType;
 using Cinema.Application.Seats.Commands.UpdateSeat;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,6 +15,12 @@ public class SeatsController : ApiController
         {
             return BadRequest("ID mismatch");
         }
+        return HandleResult(await Mediator.Send(command));
+    }
+    
+    [HttpPut("batch-change-type")]
+    public async Task<IActionResult> BatchChangeType([FromBody] BatchChangeSeatTypeCommand command)
+    {
         return HandleResult(await Mediator.Send(command));
     }
 }
