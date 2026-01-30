@@ -1,4 +1,7 @@
-﻿using Cinema.Application.Common.Settings;
+﻿using Cinema.Application.Common.Interfaces;
+using Cinema.Application.Common.Interfaces.Queries;
+using Cinema.Application.Common.Settings;
+using Cinema.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,10 +28,13 @@ public static class ConfigurePersistenceServices
                 .ConfigureWarnings(w => w.Ignore(CoreEventId.ManyServiceProvidersCreatedWarning));
         });
         services.AddScoped<ApplicationDbContextInitializer>();
+        services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
         services.AddRepositories();
     }
 
     private static void AddRepositories(this IServiceCollection services)
     {
+        services.AddScoped<MovieRepository>();
+        services.AddScoped<IMovieQueries>(provider => provider.GetRequiredService<MovieRepository>());
     }
 }

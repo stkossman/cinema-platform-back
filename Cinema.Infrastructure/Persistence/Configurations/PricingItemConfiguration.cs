@@ -21,7 +21,8 @@ public class PricingItemConfiguration : IEntityTypeConfiguration<PricingItem>
 
         builder.Property(x => x.DayOfWeek)
             .IsRequired()
-            .HasConversion<int>();
+            .HasConversion<short>()
+            .HasColumnType("smallint");
 
         builder.Property(x => x.StartTime)
             .HasConversion(new DateTimeUtcConverter())

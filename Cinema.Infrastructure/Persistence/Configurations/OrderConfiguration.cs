@@ -20,10 +20,13 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
             .HasPrecision(18, 2);
 
         builder.Property(x => x.BookingDate)
+            .IsRequired()
             .HasConversion(new DateTimeUtcConverter());
 
         builder.Property(x => x.Status)
-            .HasConversion<int>();
+            .IsRequired()
+            .HasConversion<short>()
+            .HasColumnType("smallint");
 
         builder.Property(x => x.PaymentTransactionId)
             .HasMaxLength(255);

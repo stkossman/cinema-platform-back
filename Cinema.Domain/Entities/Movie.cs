@@ -9,8 +9,8 @@ public class Movie
     public int ExternalId { get; } // TMDB id
     public int DurationMinutes { get; private set; }
     public decimal Rating { get; private set; }
-    public string? ImgUrl { get; set; }
-    public string? VideoUrl { get; set; }
+    public string? ImgUrl { get; private set; }
+    public string? VideoUrl { get; private set; }
 
     public ICollection<MovieGenre>? MovieGenres { get; private set; } = [];
     public ICollection<Session>? Sessions { get; private set; } = [];

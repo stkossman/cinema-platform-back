@@ -1,9 +1,26 @@
 ﻿using System.Data;
+using Cinema.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cinema.Application.Common.Interfaces;
 
 public interface IApplicationDbContext
 {
-    Task<IDbTransaction> BeginTransactionAsync(CancellationToken cancellationToken);
+    DbSet<Hall> Halls { get; }
+    DbSet<Seat> Seats { get; }
+    DbSet<SeatType> SeatTypes { get; }
+    DbSet<Session> Sessions { get; }
+    DbSet<Movie> Movies { get; }
+    DbSet<Genre> Genres { get; }
+    DbSet<MovieGenre> MovieGenres { get; }
+    DbSet<Pricing> Pricings { get; }
+    DbSet<HallTechnology> HallTechnologies { get; }
+    DbSet<Technology> Technologies { get; }
+    Task<int> SaveChangesAsync(CancellationToken cancellationToken);
+    DatabaseFacade Database { get; }
 
+    Task<IDbContextTransaction> BeginTransactionAsync(IsolationLevel serializable,
+        CancellationToken cancellationToken);
 }

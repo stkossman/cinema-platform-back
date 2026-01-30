@@ -19,7 +19,9 @@ public class TicketConfiguration : IEntityTypeConfiguration<Ticket>
             .HasPrecision(18, 2);
 
         builder.Property(x => x.TicketStatus)
-            .HasConversion<int>();
+            .IsRequired()
+            .HasConversion<short>()
+            .HasColumnType("smallint");
 
         builder.Property(x => x.OrderId)
             .HasConversion(x => x.Value, x => new EntityId<Order>(x));

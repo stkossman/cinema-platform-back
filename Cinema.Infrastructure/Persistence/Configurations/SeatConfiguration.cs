@@ -22,7 +22,8 @@ public class SeatConfiguration : IEntityTypeConfiguration<Seat>
             
         builder.Property(x => x.Status)
             .IsRequired()
-            .HasConversion<int>(); 
+            .HasConversion<short>()
+            .HasColumnType("smallint");
 
         builder.Property(x => x.HallId)
             .HasConversion(x => x.Value, x => new EntityId<Hall>(x));

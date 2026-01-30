@@ -1,6 +1,6 @@
 namespace Cinema.Domain.Enums;
 
-public enum OrderStatus
+public enum OrderStatus: short
 {
     Pending = 0,
     Paid = 1,

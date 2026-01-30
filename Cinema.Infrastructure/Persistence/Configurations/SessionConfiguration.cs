@@ -24,7 +24,9 @@ public class SessionConfiguration : IEntityTypeConfiguration<Session>
             .HasConversion(new DateTimeUtcConverter());
 
         builder.Property(x => x.Status)
-            .HasConversion<int>();
+            .IsRequired()
+            .HasConversion<short>()
+            .HasColumnType("smallint");
         
         builder.Property(x => x.HallId)
             .HasConversion(x => x.Value, x => new EntityId<Hall>(x));

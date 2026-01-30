@@ -1,10 +1,12 @@
 using Cinema.Api.Modules;
+using Cinema.Application;
 using Cinema.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
 
 builder.Services.SetupServices(builder.Configuration);
+builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices();
 
 builder.Services.AddEndpointsApiExplorer();

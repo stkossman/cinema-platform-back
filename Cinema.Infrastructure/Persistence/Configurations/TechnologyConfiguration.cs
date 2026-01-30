@@ -20,6 +20,7 @@ public class TechnologyConfiguration : IEntityTypeConfiguration<Technology>
 
         builder.Property(x => x.Type)
             .IsRequired()
-            .HasMaxLength(50);
+            .HasConversion<short>()
+            .HasColumnType("smallint");
     }
 }

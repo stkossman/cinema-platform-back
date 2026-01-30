@@ -7,7 +7,7 @@ public class Genre
     public EntityId<Genre> Id { get; }
     public int ExternalId { get; }
     public string Name { get; private set; }
-    public string? Slug { get; set; }
+    public string? Slug { get; private set; }
     public ICollection<MovieGenre>? MovieGenres { get; private set; } = [];
 
 

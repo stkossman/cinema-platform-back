@@ -1,13 +1,16 @@
+using System.Data;
 using System.Reflection;
+using Cinema.Application.Common.Interfaces;
 using Cinema.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cinema.Infrastructure.Persistence;
 
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-    : IdentityDbContext<User, IdentityRole<Guid>, Guid>(options)
+    : IdentityDbContext<User, IdentityRole<Guid>, Guid>(options), IApplicationDbContext
 {
     public DbSet<Movie> Movies { get; init; }
     public DbSet<MovieGenre> MovieGenres { get; init; }
@@ -23,10 +26,15 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Order> Orders { get; init; }
     public DbSet<Ticket> Tickets { get; init; }
     public DbSet<SeatLock> SeatLocks { get; init; }
-
+    
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
         base.OnModelCreating(modelBuilder);
+    }
+    
+    public Task<IDbContextTransaction> BeginTransactionAsync(IsolationLevel serializable, CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
     }
 }

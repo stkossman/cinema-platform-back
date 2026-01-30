@@ -1,6 +1,6 @@
 namespace Cinema.Domain.Enums;
 
-public enum SessionStatus
+public enum SessionStatus : short
 {
     Scheduled = 0,
     OpenForSales = 1,

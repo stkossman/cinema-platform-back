@@ -1,4 +1,6 @@
-﻿using Cinema.Application.Common.Settings;
+﻿using Cinema.Api.Filters;
+using Cinema.Application.Common.Settings;
+using FluentValidation;
 
 namespace Cinema.Api.Modules;
 
@@ -6,8 +8,9 @@ public static class SetupModule
 {
     public static void SetupServices(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddControllers();
-        services.AddCors();
+        services.AddControllers(options => {
+            options.Filters.Add<ValidationFilter>();
+        });        services.AddCors();
         services.AddRequestValidators();
         services.AddApplicationSettings(configuration);
     }
@@ -24,6 +27,7 @@ public static class SetupModule
 
     private static void AddRequestValidators(this IServiceCollection services)
     {
+        services.AddValidatorsFromAssemblyContaining<Program>();
     }
 
     private static void AddApplicationSettings(this IServiceCollection services, IConfiguration configuration)
