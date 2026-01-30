@@ -1,4 +1,3 @@
-using Cinema.Application.Auth.Commands;
 using Cinema.Application.Auth.Commands.LoginUser;
 using Cinema.Application.Auth.Commands.RegisterUser;
 using Microsoft.AspNetCore.Mvc;

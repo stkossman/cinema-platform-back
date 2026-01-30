@@ -1,6 +1,7 @@
 
 using Cinema.Application.Seats.Commands.CreateSeatType;
 using Cinema.Application.Seats.Queries.GetAllSeatTypesQuery;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cinema.Api.Controllers;
@@ -12,7 +13,8 @@ public class SeatTypesController : ApiController
     {
         return HandleResult(await Mediator.Send(new GetAllSeatTypesQuery()));
     }
-
+    
+    [Authorize(Roles = "Admin")]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateSeatTypeCommand command)
     {

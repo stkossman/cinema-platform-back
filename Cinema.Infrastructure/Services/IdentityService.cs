@@ -32,6 +32,8 @@ public class IdentityService(
             return Result.Failure<Guid>(new Error("Identity.RegisterFailed", errors));
         }
 
+        await userManager.AddToRoleAsync(user, "User");
+
         return Result.Success(user.Id);
     }
 
@@ -45,11 +47,13 @@ public class IdentityService(
         if (!checkPassword)
             return Result.Failure<string>(new Error("Identity.LoginFailed", "Invalid email or password."));
 
-        var token = GenerateJwtToken(user);
+        var roles = await userManager.GetRolesAsync(user);
+
+        var token = GenerateJwtToken(user, roles);
         return Result.Success(token);
     }
 
-    private string GenerateJwtToken(User user)
+    private string GenerateJwtToken(User user, IList<string> roles)
     {
         var jwtSettings = configuration.GetSection("JwtSettings");
         var secretKey = Encoding.UTF8.GetBytes(jwtSettings["Secret"]!);
@@ -58,9 +62,15 @@ public class IdentityService(
         {
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new(JwtRegisteredClaimNames.Email, user.Email!),
-            new(ClaimTypes.Name, user.UserName!),
-            new("firstName", user.FirstName ?? "")
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new("firstName", user.FirstName ?? ""),
+            new("lastName", user.LastName ?? "")
         };
+
+        foreach (var role in roles)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        }
 
         var tokenDescriptor = new SecurityTokenDescriptor
         {
