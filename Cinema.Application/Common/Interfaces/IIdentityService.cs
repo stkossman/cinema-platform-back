@@ -1,3 +1,4 @@
+using Cinema.Application.Users.Dtos;
 using Cinema.Domain.Shared;
 
 namespace Cinema.Application.Common.Interfaces;

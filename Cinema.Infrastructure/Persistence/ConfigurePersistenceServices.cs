@@ -36,7 +36,7 @@ public static class ConfigurePersistenceServices
         services.AddScoped<ApplicationDbContextInitializer>();
         services.AddScoped<IApplicationDbContext>(provider => 
             provider.GetRequiredService<ApplicationDbContext>());
-        
+
         services.AddIdentityCore<User>(options => 
             {
                 options.Password.RequireDigit = true;
@@ -49,9 +49,6 @@ public static class ConfigurePersistenceServices
             .AddRoles<IdentityRole<Guid>>()
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
-        
-        services.AddTransient<IIdentityService, IdentityService>();
-
         services.AddScoped<IMovieInfoProvider, EfMovieInfoProvider>();
 
         return services;
