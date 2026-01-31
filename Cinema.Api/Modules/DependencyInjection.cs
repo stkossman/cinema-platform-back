@@ -1,4 +1,5 @@
 using System.Text;
+using Cinema.Api.ExceptionHandlers;
 using Cinema.Application;
 using Cinema.Application.Common.Settings;
 using Cinema.Infrastructure;
@@ -20,7 +21,7 @@ public static class DependencyInjection
         {
             services.AddSingleton(appSettings);
         }
-
+    
         services.AddControllers();
         
         services.AddCors(options =>
@@ -51,6 +52,8 @@ public static class DependencyInjection
             };
         });
         
+        services.AddExceptionHandler<GlobalExceptionHandler>();
+        services.AddProblemDetails();
         services.AddEndpointsApiExplorer();
         
         services.AddSwaggerGen(c =>
