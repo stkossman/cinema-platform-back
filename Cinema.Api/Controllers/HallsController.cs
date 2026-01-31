@@ -6,6 +6,7 @@ using Cinema.Application.Halls.Queries.GetHallById;
 using Cinema.Application.Halls.Queries.GetHallLookups;
 using Cinema.Application.Halls.Queries.GetHallsWithPagination;
 using Cinema.Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cinema.Api.Controllers;
@@ -29,7 +30,8 @@ public class HallsController : ApiController
     {
         return HandleResult(await Mediator.Send(new GetHallByIdQuery(id)));
     }
-
+    
+    [Authorize(Roles = "Admin")]
     [HttpPost]
     public async Task<IActionResult> Create(CreateHallCommand command)
     {
@@ -40,6 +42,7 @@ public class HallsController : ApiController
         return CreatedAtAction(nameof(GetById), new { id = result.Value }, result.Value);
     }
     
+    [Authorize(Roles = "Admin")]
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateHallCommand command)
     {
@@ -47,13 +50,15 @@ public class HallsController : ApiController
         return HandleResult(await Mediator.Send(command));
     }
     
+    [Authorize(Roles = "Admin")]
     [HttpPut("{id:guid}/technologies")]
     public async Task<IActionResult> UpdateTechnologies(Guid id, [FromBody] UpdateHallTechnologiesCommand command)
     {
         if (id != command.HallId) return BadRequest("ID mismatch");
         return HandleResult(await Mediator.Send(command));
     }
-
+    
+    [Authorize(Roles = "Admin")]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {

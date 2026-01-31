@@ -1,6 +1,8 @@
 ﻿using Cinema.Application.Common.Interfaces;
+using Cinema.Domain.Entities;
 using Cinema.Domain.Interfaces;
 using Cinema.Infrastructure.Services;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
@@ -34,6 +36,19 @@ public static class ConfigurePersistenceServices
         services.AddScoped<ApplicationDbContextInitializer>();
         services.AddScoped<IApplicationDbContext>(provider => 
             provider.GetRequiredService<ApplicationDbContext>());
+
+        services.AddIdentityCore<User>(options => 
+            {
+                options.Password.RequireDigit = true;
+                options.Password.RequireLowercase = true;
+                options.Password.RequireUppercase = true;
+                options.Password.RequireNonAlphanumeric = false;
+                options.Password.RequiredLength = 6;
+                options.User.RequireUniqueEmail = true;
+            })
+            .AddRoles<IdentityRole<Guid>>()
+            .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddDefaultTokenProviders();
         services.AddScoped<IMovieInfoProvider, EfMovieInfoProvider>();
 
         return services;

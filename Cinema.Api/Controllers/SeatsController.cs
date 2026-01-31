@@ -1,6 +1,6 @@
-using Cinema.Application.Seats.Commands;
 using Cinema.Application.Seats.Commands.BatchChangeSeatType;
 using Cinema.Application.Seats.Commands.UpdateSeat;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cinema.Api.Controllers;
@@ -8,6 +8,7 @@ namespace Cinema.Api.Controllers;
 public class SeatsController : ApiController
 {
     // PUT: api/seats/{id}/type
+    [Authorize(Roles = "Admin")]
     [HttpPut("{id:guid}/type")]
     public async Task<IActionResult> ChangeType(Guid id, [FromBody] ChangeSeatTypeCommand command)
     {
@@ -18,6 +19,7 @@ public class SeatsController : ApiController
         return HandleResult(await Mediator.Send(command));
     }
     
+    [Authorize(Roles = "Admin")]
     [HttpPut("batch-change-type")]
     public async Task<IActionResult> BatchChangeType([FromBody] BatchChangeSeatTypeCommand command)
     {

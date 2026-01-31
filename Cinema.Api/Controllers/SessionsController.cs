@@ -6,6 +6,7 @@ using Cinema.Application.Sessions.Queries.GetSessionById;
 using Cinema.Application.Sessions.Queries.GetSessionsByDateQuery;
 using Cinema.Application.Sessions.Queries.GetSessionsWithPaginationQuery;
 using Cinema.Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cinema.Api.Controllers;
@@ -30,6 +31,7 @@ public class SessionsController : ApiController
         return HandleResult(await Mediator.Send(new GetSessionByIdQuery(id)));
     }
     
+    [Authorize(Roles = "Admin")]
     [HttpPost]
     public async Task<IActionResult> Create(CreateSessionCommand command)
     {
@@ -40,6 +42,7 @@ public class SessionsController : ApiController
         return CreatedAtAction(nameof(GetById), new { id = result.Value }, result.Value);
     }
     
+    [Authorize(Roles = "Admin")]
     [HttpPut("{id:guid}/reschedule")]
     public async Task<IActionResult> Reschedule(Guid id, [FromBody] RescheduleSessionCommand command)
     {
@@ -47,6 +50,7 @@ public class SessionsController : ApiController
         return HandleResult(await Mediator.Send(command));
     }
     
+    [Authorize(Roles = "Admin")]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Cancel(Guid id)
     {

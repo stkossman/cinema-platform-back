@@ -1,4 +1,6 @@
-﻿using Cinema.Infrastructure.Persistence;
+﻿using Cinema.Application.Common.Interfaces;
+using Cinema.Infrastructure.Persistence;
+using Cinema.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -9,6 +11,10 @@ public static class ConfigureInfrastructureServices
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddPersistenceServices(configuration);
+        services.AddTransient<ITokenService, TokenService>();
+        services.AddTransient<IIdentityService, IdentityService>();
+        services.AddTransient<IUserService, UserService>();
+
         return services;
     }
 }
