@@ -39,47 +39,6 @@ public class ApplicationDbContextInitializer
             throw;
         }
 
-        await SeedAsync();
     }
-
-    public async Task SeedAsync()
-    {
-        try
-        {
-            await TrySeedAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "An error occurred while seeding the database.");
-            throw;
-        }
-    }
-
-    public async Task TrySeedAsync()
-    {
-        // (Admin, User)
-        var roles = new[] { "Admin", "User" };
-        foreach (var role in roles)
-        {
-            if (!await _roleManager.RoleExistsAsync(role))
-            {
-                await _roleManager.CreateAsync(new IdentityRole<Guid>(role));
-            }
-        }
-
-        // (admin@localhost / Admin123!)
-        var administrator = new User
-        {
-            UserName = "admin@localhost",
-            Email = "admin@localhost",
-            FirstName = "Super",
-            LastName = "Admin"
-        };
-
-        if (_userManager.Users.All(u => u.UserName != administrator.UserName))
-        {
-            await _userManager.CreateAsync(administrator, "Admin123!");
-            await _userManager.AddToRoleAsync(administrator, "Admin");
-        }
-    }
+    
 }
