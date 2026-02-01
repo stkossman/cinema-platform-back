@@ -1,6 +1,8 @@
 ﻿using Cinema.Application.Common.Interfaces;
+using Cinema.Domain.Entities;
 using Cinema.Infrastructure.Persistence;
 using Cinema.Infrastructure.Services;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,7 +39,7 @@ public static class ConfigureInfrastructureServices
         });
         
         services.AddTransient<ISeatLockingService, RedisSeatLockingService>();
-
+        services.AddTransient<IPasswordHasher<User>, PasswordHasher<User>>();
         services.AddTransient<ITokenService, TokenService>();
         services.AddTransient<IIdentityService, IdentityService>();
         services.AddTransient<IUserService, UserService>();
