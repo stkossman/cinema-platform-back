@@ -6,28 +6,18 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cinema.Application.Sessions.Queries.GetSessionsByDateQuery;
 
-public class GetSessionsByDateQueryHandler 
+public class GetSessionsByDateQueryHandler(IApplicationDbContext context) 
     : IRequestHandler<GetSessionsByDateQuery, Result<List<SessionDto>>>
 {
-    private readonly IApplicationDbContext _context;
-
-    public GetSessionsByDateQueryHandler(IApplicationDbContext context)
-    {
-        _context = context;
-    }
-
     public async Task<Result<List<SessionDto>>> Handle(GetSessionsByDateQuery request, CancellationToken cancellationToken)
     {
         var date = request.Date?.Date ?? DateTime.UtcNow.Date;
         var nextDay = date.AddDays(1);
 
-        var sessions = await _context.Sessions
+        var sessions = await context.Sessions
             .AsNoTracking()
             .Where(s => s.StartTime >= date && s.StartTime < nextDay)
             .OrderBy(s => s.StartTime)
-            .Include(s => s.Movie)
-            .Include(s => s.Hall)
-            .Include(s => s.Pricing)
             .Select(s => new SessionDto
             {
                 Id = s.Id.Value,
@@ -35,7 +25,7 @@ public class GetSessionsByDateQueryHandler
                 EndTime = s.EndTime,
                 Status = s.Status.ToString(),
                 MovieId = s.MovieId.Value,
-                MovieTitle = s.Movie != null ? s.Movie.Title : "Unknown",
+                MovieTitle = s.Movie != null ? s.Movie.Title : "Unknown", 
                 HallId = s.HallId.Value,
                 HallName = s.Hall != null ? s.Hall.Name : "Unknown",
                 PricingId = s.PricingId.Value,

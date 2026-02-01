@@ -5,23 +5,13 @@ using Cinema.Domain.Enums;
 using Cinema.Domain.Exceptions;
 using Cinema.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
-using System.Data;
 
 namespace Cinema.Application.Services;
 
-public class SessionSchedulingService
+public class SessionSchedulingService(
+    IApplicationDbContext context, 
+    IMovieInfoProvider movieProvider)
 {
-    private readonly IApplicationDbContext _context;
-    private readonly IMovieInfoProvider _movieProvider;
-
-    public SessionSchedulingService(
-        IApplicationDbContext context, 
-        IMovieInfoProvider movieProvider)
-    {
-        _context = context;
-        _movieProvider = movieProvider;
-    }
-
     public async Task<Session> ScheduleSessionAsync(
         EntityId<Hall> hallId,
         EntityId<Movie> movieId,
@@ -30,12 +20,14 @@ public class SessionSchedulingService
         int cleaningTimeMinutes,
         CancellationToken ct)
     {
-        var durationMinutes = await _movieProvider.GetDurationMinutesAsync(movieId, ct);
+        var durationMinutes = await movieProvider.GetDurationMinutesAsync(movieId, ct);
         if (durationMinutes == null)
             throw new DomainException("Movie not found.");
         
         var sessionEndTime = startTime.AddMinutes(durationMinutes.Value);
         var occupyEndTime = sessionEndTime.AddMinutes(cleaningTimeMinutes);
+
+        await ValidateSessionOverlapAsync(hallId, startTime, occupyEndTime, null, ct);
         
         return Session.Create(
             EntityId<Session>.New(),
@@ -49,21 +41,37 @@ public class SessionSchedulingService
 
     public async Task RescheduleSessionAsync(Session session, DateTime newStartTime, CancellationToken ct)
     {
-        var currentDuration = session.EndTime - session.StartTime;
-        var newEndTime = newStartTime.Add(currentDuration);
-
-        var hasOverlap = await _context.Sessions
-            .AnyAsync(s => 
-                s.Id != session.Id &&
-                s.HallId == session.HallId &&
-                s.Status != SessionStatus.Cancelled &&
-                s.StartTime < newEndTime && 
-                s.EndTime > newStartTime, 
-                ct);
-
-        if (hasOverlap)
-            throw new DomainException("Rescheduling failed. Overlap detected.");
+        var duration = session.EndTime - session.StartTime;
+        var newEndTime = newStartTime.Add(duration);
+        
+        await ValidateSessionOverlapAsync(session.HallId, newStartTime, newEndTime, session.Id, ct);
 
         session.Reschedule(newStartTime, newEndTime);
+    }
+
+    private async Task ValidateSessionOverlapAsync(
+        EntityId<Hall> hallId, 
+        DateTime start, 
+        DateTime end, 
+        EntityId<Session>? excludeSessionId, 
+        CancellationToken ct)
+    {
+        var query = context.Sessions
+            .AsNoTracking()
+            .Where(s => 
+                s.HallId == hallId &&
+                s.Status != SessionStatus.Cancelled &&
+                s.StartTime < end && 
+                s.EndTime > start);
+
+        if (excludeSessionId != null)
+        {
+            query = query.Where(s => s.Id != excludeSessionId);
+        }
+
+        var hasOverlap = await query.AnyAsync(ct);
+
+        if (hasOverlap)
+            throw new DomainException("Time slot overlaps with an existing session in this hall.");
     }
 }

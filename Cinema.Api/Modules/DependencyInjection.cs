@@ -1,4 +1,6 @@
 using System.Text;
+using System.Threading.RateLimiting;
+using Cinema.Api.ExceptionHandlers;
 using Cinema.Application;
 using Cinema.Application.Common.Settings;
 using Cinema.Infrastructure;
@@ -20,8 +22,24 @@ public static class DependencyInjection
         {
             services.AddSingleton(appSettings);
         }
-
+    
         services.AddControllers();
+        
+        services.AddRateLimiter(options =>
+        {
+            options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    factory: partition => new FixedWindowRateLimiterOptions
+                    {
+                        AutoReplenishment = true,
+                        PermitLimit = 10,
+                        QueueLimit = 0,
+                        Window = TimeSpan.FromSeconds(10)
+                    }));
+            
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+        });
         
         services.AddCors(options =>
         {
@@ -51,6 +69,8 @@ public static class DependencyInjection
             };
         });
         
+        services.AddExceptionHandler<GlobalExceptionHandler>();
+        services.AddProblemDetails();
         services.AddEndpointsApiExplorer();
         
         services.AddSwaggerGen(c =>
