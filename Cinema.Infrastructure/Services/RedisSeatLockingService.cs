@@ -90,6 +90,14 @@ public class RedisSeatLockingService : ISeatLockingService
         }
     }
 
+    public async Task<bool> ValidateLockAsync(Guid sessionId, Guid seatId, Guid userId, CancellationToken ct = default)
+    {
+        var db = _redis.GetDatabase();
+        var key = GetKey(sessionId, seatId);
+        var lockValue = await db.StringGetAsync(key);
+        
+        return lockValue.HasValue && lockValue == userId.ToString();
+    }
     private static string GetKey(Guid sessionId, Guid seatId) 
         => $"lock:s:{sessionId}:st:{seatId}";
 }
