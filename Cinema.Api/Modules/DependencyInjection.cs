@@ -1,10 +1,12 @@
+using System.Reflection;
 using System.Threading.RateLimiting;
-using Cinema.Api.Services; 
+using Cinema.Api.Services;
 using Cinema.Application;
 using Cinema.Application.Common.Interfaces;
 using Cinema.Application.Common.Settings;
 using Cinema.Infrastructure;
 using Mapster;
+using MapsterMapper;
 using Microsoft.OpenApi.Models;
 
 namespace Cinema.Api.Modules;
@@ -18,31 +20,51 @@ public static class DependencyInjection
 
         var appSettings = configuration.Get<ApplicationSettings>();
         if (appSettings != null)
-        {
             services.AddSingleton(appSettings);
-        }
-    
+
         services.AddControllers();
         services.AddHttpContextAccessor();
+        
+        services.AddCors(options =>
+        {
+            options.AddPolicy("AllowAll", policy =>
+            {
+                policy
+                    .AllowAnyOrigin()
+                    .AllowAnyMethod()
+                    .AllowAnyHeader();
+            });
+        });
+
         services.AddMemoryCache();
         services.AddDataProtection();
+        
         services.AddScoped<ICurrentUserService, CurrentUserService>();
-        services.AddMapster();
-        services.AddSignalR();
+
         services.AddTransient<ITicketNotifier, SignalRTicketNotifier>();
+        services.AddSignalR();
+        
+        var typeAdapterConfig = TypeAdapterConfig.GlobalSettings;
+        typeAdapterConfig.Scan(
+            Assembly.GetExecutingAssembly(),
+            typeof(Cinema.Application.ConfigureServices).Assembly
+        );
+
+        services.AddSingleton(typeAdapterConfig);
+        services.AddScoped<IMapper, ServiceMapper>();
 
         services.AddRateLimiter(options =>
         {
             options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
                 RateLimitPartition.GetFixedWindowLimiter(
                     partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-                    factory: partition => new FixedWindowRateLimiterOptions
+                    factory: _ => new FixedWindowRateLimiterOptions
                     {
                         AutoReplenishment = true,
                         PermitLimit = 100,
                         Window = TimeSpan.FromMinutes(1)
                     }));
-            
+
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
         });
 
@@ -57,13 +79,13 @@ public static class DependencyInjection
     {
         services.AddSwaggerGen(c =>
         {
-            c.SwaggerDoc("v1", new OpenApiInfo 
-            { 
-                Title = "Cinema API", 
+            c.SwaggerDoc("v1", new OpenApiInfo
+            {
+                Title = "Cinema API",
                 Version = "v1",
                 Description = "Cinema Platform API"
             });
-            
+
             c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
             {
                 Description = "JWT Authorization header using the Bearer scheme.",

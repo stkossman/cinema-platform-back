@@ -1,3 +1,3 @@
 namespace Cinema.Application.Genres.Dtos;
 
-public record GenreDto(int Id, string Name);
+public record GenreDto(Guid Id, string Name);

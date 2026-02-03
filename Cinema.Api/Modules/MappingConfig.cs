@@ -5,7 +5,6 @@ using Cinema.Application.Movies.Dtos;
 using Cinema.Domain.Common;
 using Cinema.Domain.Entities;
 using Mapster;
-using Cinema.Application;
 
 namespace Cinema.Api.Modules;
 
@@ -15,8 +14,8 @@ public class MappingConfig : IRegister
     {
         var domainAssembly = typeof(Movie).Assembly;
         var entityTypes = domainAssembly.GetTypes()
-            .Where(t => t.IsClass 
-                        && !t.IsAbstract 
+            .Where(t => t.IsClass
+                        && !t.IsAbstract
                         && !t.IsGenericType
                         && t.Namespace != null
                         && t.Namespace.EndsWith("Entities"));
@@ -29,11 +28,6 @@ public class MappingConfig : IRegister
             configureMethod!.MakeGenericMethod(type)
                 .Invoke(null, new object[] { config });
         }
-        
-        config.Scan(
-            Assembly.GetExecutingAssembly(), 
-            typeof(Cinema.Application.ConfigureServices).Assembly
-        );
         
         config.NewConfig<HallTechnology, TechnologyDto>()
             .Map(dest => dest, src => src.Technology);
@@ -53,7 +47,7 @@ public class MappingConfig : IRegister
         config.NewConfig<Guid, EntityId<T>>()
             .MapWith(guid => CreateEntityId<T>(guid));
     }
-    
+
     private static EntityId<T> CreateEntityId<T>(Guid guid)
     {
         return (EntityId<T>)Activator.CreateInstance(typeof(EntityId<T>), guid)!;
