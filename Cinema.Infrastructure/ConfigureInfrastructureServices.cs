@@ -92,6 +92,8 @@ public static class ConfigureInfrastructureServices
             })
             .AddPolicyHandler(retryPolicy);
         
+        services.AddTransient<IPaymentService, MockPaymentService>();
+        services.AddTransient<IPriceCalculator, PriceCalculator>();
         services.AddTransient<ISeatLockingService, RedisSeatLockingService>();
         services.AddTransient<IPasswordHasher<User>, PasswordHasher<User>>();
         services.AddTransient<ITokenService, TokenService>();

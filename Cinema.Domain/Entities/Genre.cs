@@ -10,8 +10,6 @@ public class Genre
     public string? Slug { get; private set; }
     
     public ICollection<MovieGenre> MovieGenres { get; private set; } = [];
-    
-    private Genre() { }
 
     private Genre(EntityId<Genre> id, int externalId, string name, string slug)
     {
