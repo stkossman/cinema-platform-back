@@ -1,4 +1,3 @@
-
 using Cinema.Application.Orders.Commands.CancelOrder;
 using Cinema.Application.Orders.Commands.CreateOrder;
 using Cinema.Application.Orders.Dtos;
@@ -15,7 +14,13 @@ public class OrdersController : ApiController
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateOrderRequest request)
     {
-        var command = new CreateOrderCommand(request.SessionId, request.SeatIds, request.PaymentToken);
+        var command = new CreateOrderCommand(
+            request.SessionId, 
+            request.SeatIds, 
+            request.PaymentToken, 
+            Guid.NewGuid()
+        );
+        
         var result = await Mediator.Send(command);
         return HandleResult(result);
     }

@@ -35,7 +35,7 @@ public class TicketConfiguration : IEntityTypeConfiguration<Ticket>
 
         builder.HasOne(x => x.Session)
             .WithMany(x => x.Tickets)
-            .HasForeignKey(x => x.SessionId)
+            .HasForeignKey(x => x.SessionId)    
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.Property(x => x.SeatId)
@@ -50,5 +50,8 @@ public class TicketConfiguration : IEntityTypeConfiguration<Ticket>
         builder.HasIndex(t => new { t.SessionId, t.SeatId })
             .IsUnique()
             .HasFilter($"ticket_status IN ({(int)TicketStatus.Valid}, {(int)TicketStatus.Used})");
+        builder.HasIndex(t => new { t.SessionId, t.SeatId })
+            .IsUnique()
+            .HasFilter("\"TicketStatus\" IN (1, 2)");
     }
 }

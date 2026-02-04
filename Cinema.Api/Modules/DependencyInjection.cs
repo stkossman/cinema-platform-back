@@ -33,6 +33,17 @@ public static class DependencyInjection
                     .AllowAnyHeader();
             });
         });
+        
+        services.AddOutputCache(options =>
+        {
+            options.AddBasePolicy(builder => builder.Expire(TimeSpan.FromSeconds(60)));
+        });
+        
+        services.AddStackExchangeRedisOutputCache(options =>
+        {
+            options.Configuration = configuration.GetConnectionString("RedisConnection");
+            options.InstanceName = "Cinema_OutputCache_";
+        });
 
         services.AddMemoryCache();
         services.AddDataProtection();

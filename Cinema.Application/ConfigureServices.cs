@@ -20,14 +20,17 @@ public static class ConfigureServices
         {
             cfg.RegisterServicesFromAssembly(assembly);
             cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+            cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(IdempotencyBehavior<,>));
         });
         
         var config = TypeAdapterConfig.GlobalSettings;
-        
+
         config.Scan(assembly);
+
+        config.Compile();
+        
         services.AddSingleton(config);
         services.AddScoped<IMapper, ServiceMapper>();
-        
         services.AddScoped<SessionSchedulingService>();
         return services;
     }
