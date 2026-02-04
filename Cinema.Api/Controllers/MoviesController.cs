@@ -12,6 +12,7 @@ using Hangfire;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 
 namespace Cinema.Api.Controllers;
 
@@ -51,9 +52,15 @@ public class MoviesController : ApiController
     }
     
     [HttpGet]
-    public async Task<ActionResult<PaginatedList<MovieDto>>> GetAll([FromQuery] GetMoviesWithPaginationQuery query)
+    [OutputCache(Duration = 60, VaryByQueryKeys = new[] { "pageNumber", "pageSize", "searchTerm", "genreId" })]
+    public async Task<ActionResult<PaginatedList<MovieDto>>> GetMovies([FromQuery] GetMoviesWithPaginationQuery query)
     {
-        return HandleResult(await Mediator.Send(query));
+        var result = await Mediator.Send(query);
+        if (result.IsSuccess)
+        {
+            return Ok(result.Value);
+        }
+        return BadRequest(result.Error);
     }
     
     [HttpGet("{id:guid}")]

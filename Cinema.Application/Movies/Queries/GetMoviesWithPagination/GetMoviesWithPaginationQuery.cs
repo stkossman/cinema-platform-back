@@ -22,11 +22,8 @@ public class GetMoviesWithPaginationQueryHandler(IApplicationDbContext context)
     {
         var query = context.Movies
             .AsNoTracking()
-            .Include(m => m.MovieGenres)
-            .ThenInclude(mg => mg.Genre)
-            .Where(m => !m.IsDeleted)
-            .AsQueryable();
-        
+            .Where(m => !m.IsDeleted);
+
         if (!string.IsNullOrWhiteSpace(request.SearchTerm))
         {
             var term = request.SearchTerm.Trim().ToLower();
@@ -38,12 +35,13 @@ public class GetMoviesWithPaginationQueryHandler(IApplicationDbContext context)
             query = query.Where(m => m.MovieGenres.Any(mg => mg.Genre.ExternalId == request.GenreId));
         }
         
-        query = query.OrderByDescending(m => m.ReleaseYear).ThenBy(m => m.Title);
-        
-        var dtoQuery = query.ProjectToType<MovieDto>();
-        
+        var orderedQuery = query.OrderByDescending(m => m.ReleaseYear).ThenBy(m => m.Title);
+
+        var dtoQuery = orderedQuery
+            .ProjectToType<MovieDto>(); 
+
         var pagedList = await PaginatedList<MovieDto>.CreateAsync(
-            dtoQuery, 
+            dtoQuery.AsSplitQuery(), 
             request.PageNumber, 
             request.PageSize);
 

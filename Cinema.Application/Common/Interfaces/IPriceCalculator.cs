@@ -5,9 +5,8 @@ namespace Cinema.Application.Common.Interfaces;
 
 public interface IPriceCalculator
 {
-    Task<decimal> CalculatePriceAsync(
-        EntityId<Pricing> pricingId, 
+    decimal CalculatePrice(
+        Pricing pricing, 
         EntityId<SeatType> seatTypeId, 
-        DateTime sessionStartTime, 
-        CancellationToken ct = default);
+        DateTime sessionStartTime);
 }

@@ -2,46 +2,23 @@ using Cinema.Application.Common.Interfaces;
 using Cinema.Domain.Common;
 using Cinema.Domain.Entities;
 using Cinema.Domain.Exceptions;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace Cinema.Infrastructure.Services;
 
-public class PriceCalculator(
-    IApplicationDbContext context,
-    ILogger<PriceCalculator> logger) 
-    : IPriceCalculator
+public class PriceCalculator : IPriceCalculator
 {
-    public async Task<decimal> CalculatePriceAsync(
-        EntityId<Pricing> pricingId, 
+    public decimal CalculatePrice(
+        Pricing pricing, 
         EntityId<SeatType> seatTypeId, 
-        DateTime sessionStartTime, 
-        CancellationToken ct = default)
+        DateTime sessionStartTime)
     {
-        var pricingData = await context.Pricings
-            .AsNoTracking()
-            .Include(p => p.PricingItems)
-            .ThenInclude(pi => pi.SeatType)
-            .FirstOrDefaultAsync(p => p.Id == pricingId, ct);
-
-        if (pricingData == null)
-        {
-            logger.LogError("Pricing policy {PricingId} not found.", pricingId);
-            throw new DomainException($"Pricing policy not found.");
-        }
-
-        var relevantItems = pricingData.PricingItems?
+        var relevantItems = pricing.PricingItems?
             .Where(pi => pi.SeatTypeId == seatTypeId)
             .ToList();
 
         if (relevantItems == null || !relevantItems.Any())
         {
-            var seatTypeName = await context.SeatTypes
-                .Where(st => st.Id == seatTypeId)
-                .Select(st => st.Name)
-                .FirstOrDefaultAsync(ct) ?? "Unknown";
-
-            throw new PriceNotConfiguredException(pricingData.Name, seatTypeName, sessionStartTime);
+            throw new PriceNotConfiguredException(pricing.Name, seatTypeId.ToString(), sessionStartTime);
         }
         
         var requestTime = sessionStartTime.TimeOfDay;
@@ -58,8 +35,7 @@ public class PriceCalculator(
             return bestMatch.Price;
         }
         
-        var seatType = relevantItems.First().SeatType?.Name ?? "Unknown";
-        throw new PriceNotConfiguredException(pricingData.Name, seatType, sessionStartTime);
+        throw new PriceNotConfiguredException(pricing.Name, seatTypeId.ToString(), sessionStartTime);
     }
     
     private static bool IsTimeApplicable(PricingItem item, TimeSpan sessionTime)
