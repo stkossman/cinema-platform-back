@@ -13,7 +13,8 @@ public record MovieDto(
     string? BackdropUrl,
     string? TrailerUrl,
     List<string> Genres,
-    List<ActorDto> Cast
+    List<ActorDto> Cast,
+    int Status
 );
 
 public record ActorDto(string Name, string? Role, string? PhotoUrl);
