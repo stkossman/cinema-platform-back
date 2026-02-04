@@ -3,4 +3,4 @@ using MediatR;
 
 namespace Cinema.Application.Genres.Commands.CreateGenre;
 
-public record CreateGenreCommand(string Name, int ExternalId) : IRequest<Result<int>>;
+public record CreateGenreCommand(string Name, int? ExternalId) : IRequest<Result<Guid>>;

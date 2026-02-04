@@ -24,7 +24,7 @@ public class ImportMovieCommandHandler(
         {
             return Result.Failure<Guid>(new Error("Movie.Exists", "Movie already imported."));
         }
-        
+
         TmdbMovieDetails details;
         try
         {
@@ -58,7 +58,7 @@ public class ImportMovieCommandHandler(
                 var trailer = details.Videos?.Results?
                     .FirstOrDefault(v => v.Site == "YouTube" && (v.Type == "Trailer" || v.Type == "Teaser"));
                 var trailerUrl = trailer != null ? $"https://www.youtube.com/watch?v={trailer.Key}" : null;
-
+                
                 var movie = Movie.Import(
                     details.Id,
                     details.Title,
@@ -111,7 +111,7 @@ public class ImportMovieCommandHandler(
         var tmdbGenreIds = tmdbGenres.Select(g => g.Id).ToList();
         
         var existingGenres = await context.Genres
-            .Where(g => tmdbGenreIds.Contains(g.ExternalId))
+            .Where(g => g.ExternalId != null && tmdbGenreIds.Contains(g.ExternalId.Value))
             .ToListAsync(ct);
 
         foreach (var tmdbGenre in tmdbGenres)
@@ -121,10 +121,10 @@ public class ImportMovieCommandHandler(
             if (genre == null)
             {
                 genre = Genre.Import(tmdbGenre.Id, tmdbGenre.Name);
+                
                 context.Genres.Add(genre);
                 existingGenres.Add(genre);
             }
-
             movie.AddGenre(genre);
         }
     }
