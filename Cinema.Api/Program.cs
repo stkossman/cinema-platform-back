@@ -25,6 +25,7 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.UseOutputCache();
 app.UseHangfireDashboard();
 
 app.MapInfrastructureEndpoints();
