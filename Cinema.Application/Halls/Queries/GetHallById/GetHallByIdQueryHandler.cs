@@ -12,20 +12,30 @@ namespace Cinema.Application.Halls.Queries.GetHallById;
 public class GetHallByIdQueryHandler(IApplicationDbContext context) 
     : IRequestHandler<GetHallByIdQuery, Result<HallDto>>
 {
-    public async Task<Result<HallDto>> Handle(GetHallByIdQuery request, CancellationToken cancellationToken)
+    public async Task<Result<HallDto>> Handle(GetHallByIdQuery request, CancellationToken ct)
     {
         var hallId = new EntityId<Hall>(request.Id);
-        var hallDto = await context.Halls
+        
+        var hall = await context.Halls
             .AsNoTracking()
-            .Where(h => h.Id == hallId)
-            .ProjectToType<HallDto>() 
-            .FirstOrDefaultAsync(cancellationToken);
+            .AsSplitQuery()
+            .Include(h => h.Seats).ThenInclude(s => s.SeatType)
+            .Include(h => h.Technologies).ThenInclude(ht => ht.Technology)
+            .FirstOrDefaultAsync(h => h.Id == hallId, ct);
 
-        if (hallDto == null)
+        if (hall == null)
         {
             return Result.Failure<HallDto>(new Error("Hall.NotFound", "Hall not found"));
         }
         
+        var config = TypeAdapterConfig.GlobalSettings.Fork(c => 
+        {
+            c.ForType<Hall, HallDto>()
+                .Map(dest => dest.Seats, src => src.Seats);
+        });
+        
+        var hallDto = hall.Adapt<HallDto>(config);
+
         return Result.Success(hallDto);
     }
 }

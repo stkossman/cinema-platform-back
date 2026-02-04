@@ -11,12 +11,10 @@ namespace Cinema.Application.Halls.Queries.GetHallsWithPagination;
 public class GetHallsWithPaginationQueryHandler(IApplicationDbContext context) 
     : IRequestHandler<GetHallsWithPaginationQuery, Result<PaginatedList<HallDto>>>
 {
-    public async Task<Result<PaginatedList<HallDto>>> Handle(GetHallsWithPaginationQuery request, CancellationToken cancellationToken)
+    public async Task<Result<PaginatedList<HallDto>>> Handle(GetHallsWithPaginationQuery request, CancellationToken ct)
     {
-        var query = context.Halls
-            .AsNoTracking()
-            .AsQueryable();
-        
+        var query = context.Halls.AsNoTracking();
+
         if (!string.IsNullOrWhiteSpace(request.SearchTerm))
         {
             query = query.Where(h => h.Name.Contains(request.SearchTerm));
@@ -29,13 +27,10 @@ public class GetHallsWithPaginationQueryHandler(IApplicationDbContext context)
         
         var dtoQuery = query
             .OrderBy(h => h.Name)
-            .ProjectToType<HallDto>();
+            .ProjectToType<HallDto>(); 
 
-        var pagedList = await PaginatedList<HallDto>.CreateAsync(
-            dtoQuery, 
-            request.PageNumber, 
-            request.PageSize);
-
+        var pagedList = await PaginatedList<HallDto>.CreateAsync(dtoQuery, request.PageNumber, request.PageSize);
+        
         return Result.Success(pagedList);
     }
 }
