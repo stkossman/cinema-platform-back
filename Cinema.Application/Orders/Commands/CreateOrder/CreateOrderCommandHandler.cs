@@ -23,25 +23,22 @@ public class CreateOrderCommandHandler(
     public async Task<Result<Guid>> Handle(CreateOrderCommand request, CancellationToken ct)
     {
         var userId = currentUser.UserId;
-        if (userId == null) 
-            return Result.Failure<Guid>(new Error("Auth.Required", "User not authenticated"));
-        
+        if (userId == null) return Result.Failure<Guid>(new Error("Auth.Required", "User not authenticated"));
+
         foreach (var seatId in request.SeatIds)
         {
-            var hasLock = await seatLockingService.ValidateLockAsync(request.SessionId, seatId, userId.Value, ct);
-            if (!hasLock)
-                return Result.Failure<Guid>(new Error("Order.LockExpired", "Seat lock expired or invalid."));
+            if (!await seatLockingService.ValidateLockAsync(request.SessionId, seatId, userId.Value, ct))
+                return Result.Failure<Guid>(new Error("Order.LockExpired", "Seat lock expired."));
         }
 
         var strategy = context.Database.CreateExecutionStrategy();
 
-        return await strategy.ExecuteAsync(async () =>
+        var transactionResult = await strategy.ExecuteAsync<Result<Order>>(async () =>
         {
             using var transaction = await context.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
             try
             {
                 var rawSeatIds = request.SeatIds.ToArray();
-
                 var seatIdsParam = string.Join(",", rawSeatIds.Select(id => $"'{id}'"));
 
                 var seats = await context.Seats
@@ -49,19 +46,22 @@ public class CreateOrderCommandHandler(
                     .ToListAsync(ct);
 
                 if (seats.Count != request.SeatIds.Count)
-                    return Result.Failure<Guid>(new Error("Order.SeatsNotFound", "Some seats unavailable or ID mismatch."));
+                    return Result.Failure<Order>(new Error("Order.SeatsNotFound", "Some seats unavailable or ID mismatch."));
 
                 if (seats.Any(s => s.Status != SeatStatus.Active))
-                     return Result.Failure<Guid>(new Error("Order.SeatsNotActive", "One or more seats are not active."));
-                
+                     return Result.Failure<Order>(new Error("Order.SeatsNotActive", "One or more seats are not active."));
+
+                var targetSeatIds = request.SeatIds.Select(id => new EntityId<Seat>(id)).ToList();
+                var targetSessionId = new EntityId<Session>(request.SessionId);
+
                 var soldSeats = await context.Tickets
                     .AnyAsync(t => 
-                        t.SessionId == new EntityId<Session>(request.SessionId) && 
-                        request.SeatIds.Contains(t.SeatId.Value) && 
+                        t.SessionId == targetSessionId && 
+                        targetSeatIds.Contains(t.SeatId) &&
                         (t.TicketStatus == TicketStatus.Valid || t.TicketStatus == TicketStatus.Used), ct);
 
                 if (soldSeats)
-                     return Result.Failure<Guid>(new Error("Order.SeatsSold", "One or more seats are already sold."));
+                     return Result.Failure<Order>(new Error("Order.SeatsSold", "One or more seats are already sold."));
 
                 var sessionId = new EntityId<Session>(request.SessionId);
                 var session = await context.Sessions
@@ -69,7 +69,7 @@ public class CreateOrderCommandHandler(
                     .FirstOrDefaultAsync(s => s.Id == sessionId, ct);
 
                 if (session == null) 
-                    return Result.Failure<Guid>(new Error("Session.NotFound", "Session not found"));
+                    return Result.Failure<Order>(new Error("Session.NotFound", "Session not found"));
 
                 var pricing = await context.Pricings
                     .Include(p => p.PricingItems)
@@ -77,7 +77,7 @@ public class CreateOrderCommandHandler(
                     .FirstOrDefaultAsync(p => p.Id == session.PricingId, ct);
                 
                 if (pricing == null)
-                    return Result.Failure<Guid>(new Error("Pricing.NotFound", "Pricing policy missing."));
+                    return Result.Failure<Order>(new Error("Pricing.NotFound", "Pricing policy missing."));
 
                 var prices = new Dictionary<EntityId<Seat>, decimal>();
                 foreach (var seat in seats)
@@ -87,55 +87,62 @@ public class CreateOrderCommandHandler(
                         var price = priceCalculator.CalculatePrice(pricing, seat.SeatTypeId, session.StartTime);
                         prices[seat.Id] = price;
                     }
-                    catch (DomainException dex)
+                    catch (Exception dex)
                     {
-                        return Result.Failure<Guid>(new Error("Pricing.Error", dex.Message));
+                        return Result.Failure<Order>(new Error("Pricing.Error", dex.Message));
                     }
                 }
                 
                 var order = Order.Create(userId.Value, session, seats, prices);
-                
                 context.Orders.Add(order);
+                
                 await context.SaveChangesAsync(ct);
-
                 await transaction.CommitAsync(ct);
-                
-                var paymentResult = await paymentService.ProcessPaymentAsync(order.TotalAmount, "UAH", request.PaymentToken, ct);
 
-                if (!paymentResult.IsSuccess)
-                {
-
-                    order.MarkAsFailed();
-                    context.Orders.Update(order);
-                    await context.SaveChangesAsync(ct);
-                    
-                    return Result.Failure<Guid>(new Error("Payment.Failed", paymentResult.ErrorMessage ?? "Payment declined."));
-                }
-
-                order.MarkAsPaid(paymentResult.TransactionId!);
-                context.Orders.Update(order);
-                await context.SaveChangesAsync(ct);
-                
-                _ = Task.Run(async () => 
-                {
-                    foreach (var seatId in request.SeatIds)
-                        await seatLockingService.UnlockSeatAsync(request.SessionId, seatId, userId.Value);
-                }, CancellationToken.None);
-
-                return Result.Success(order.Id.Value);
+                return Result.Success(order);
             }
             catch (Exception ex)
             {
                 await transaction.RollbackAsync(ct);
-                logger.LogError(ex, "Order creation transaction failed.");
-                
-                if (ex.InnerException?.Message.Contains("55P03") == true)
-                {
-                    return Result.Failure<Guid>(new Error("Order.Concurrency", "Seats are currently being booked by someone else. Please try again."));
-                }
-
-                return Result.Failure<Guid>(new Error("Order.SystemError", "An unexpected error occurred."));
+                logger.LogError(ex, "Order booking failed");
+                return Result.Failure<Order>(new Error("Order.CreateFailed", ex.Message));
             }
         });
+
+        if (transactionResult.IsFailure)
+            return Result.Failure<Guid>(transactionResult.Error);
+
+        var createdOrder = transactionResult.Value;
+
+        try
+        {
+            var paymentResult = await paymentService.ProcessPaymentAsync(createdOrder.TotalAmount, "UAH", request.PaymentToken, ct);
+
+            if (!paymentResult.IsSuccess)
+            {
+                createdOrder.MarkAsFailed();
+                context.Orders.Update(createdOrder);
+                await context.SaveChangesAsync(ct);
+                
+                return Result.Failure<Guid>(new Error("Payment.Failed", paymentResult.ErrorMessage ?? "Payment declined."));
+            }
+
+            createdOrder.MarkAsPaid(paymentResult.TransactionId!);
+            context.Orders.Update(createdOrder);
+            await context.SaveChangesAsync(ct);
+
+            _ = Task.Run(async () => 
+            {
+                foreach (var seatId in request.SeatIds)
+                    await seatLockingService.UnlockSeatAsync(request.SessionId, seatId, userId.Value);
+            }, CancellationToken.None);
+
+            return Result.Success(createdOrder.Id.Value);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error during payment processing or status update.");
+            return Result.Failure<Guid>(new Error("Order.PaymentSystemError", "System error during payment processing."));
+        }
     }
 }
