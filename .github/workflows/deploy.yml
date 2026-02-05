@@ -21,11 +21,20 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore ./Cinema.Api/Cinema.Api.csproj
 
+    - name: Apply Production Settings
+      uses: microsoft/variable-substitution@v1
+      with:
+        files: 'Cinema.Api/appsettings.json'
+      env:
+        ConnectionStrings.DefaultConnection: ${{ secrets.CONNECTION_STRING }}
+        JwtSettings.Secret: ${{ secrets.JWT_SECRET }}
+        Redis.Configuration: ${{ secrets.REDIS_CONN }}
+
     - name: Build and Publish
       run: dotnet publish ./Cinema.Api/Cinema.Api.csproj -c Release -o ./publish
 
     - name: FTP Deploy
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
       with:
         server: ${{ secrets.FTP_SERVER }}
         username: ${{ secrets.FTP_USERNAME }}
