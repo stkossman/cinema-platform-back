@@ -79,33 +79,31 @@ jobs:
             Write-Error "MSDeploy not found at $msdeployPath"
             exit 1
         }
-
-        $arguments = @(
-            "-verb:sync",
-            "-source:contentPath=$sourcePath",
-            "-dest:contentPath=$siteName,ComputerName=$publishUrl,UserName=$userName,Password=$password,AuthType=Basic",
-            "-enableRule:AppOffline",
-            "-allowUntrusted",
-            "-verbose",
-            "-retryAttempts:3",
-            "-retryInterval:5000"
+        
+        $args = @(
+            '-verb:sync'
+            ("-source:contentPath=`"$sourcePath`"")
+            ("-dest:contentPath=`"$siteName`",ComputerName=`"$publishUrl`",UserName=`"$userName`",Password=`"$password`",AuthType=`"Basic`"")
+            '-enableRule:AppOffline'
+            '-allowUntrusted'
+            '-verbose'
+            '-retryAttempts:3'
+            '-retryInterval:5000'
         )
         
-        Write-Host "Executing msdeploy with arguments:"
-        $arguments | ForEach-Object { 
-            if ($_ -notmatch "Password") { 
-                Write-Host "  $_" 
-            } else {
-                Write-Host "  [argument with password - hidden]"
-            }
-        }
-        
         try {
-            & $msdeployPath @arguments
+            Write-Host "Running msdeploy..."
+            Write-Host "Executing: $msdeployPath with arguments (password hidden)"
             
-            if ($LASTEXITCODE -ne 0) {
-                Write-Error "Deployment failed with exit code $LASTEXITCODE"
-                exit $LASTEXITCODE
+            $proc = Start-Process -FilePath $msdeployPath `
+                                 -ArgumentList $args `
+                                 -Wait `
+                                 -NoNewWindow `
+                                 -PassThru
+            
+            if ($proc.ExitCode -ne 0) {
+                Write-Error "Deployment failed with exit code $($proc.ExitCode)"
+                exit $proc.ExitCode
             }
             
             Write-Host "========================================="
