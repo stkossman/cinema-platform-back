@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-and-deploy:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     steps:
     - name: Checkout code
@@ -34,12 +34,19 @@ jobs:
     - name: Build and Publish
       run: dotnet publish ./Cinema.Api/Cinema.Api.csproj -c Release -o ./publish
 
-    - name: Web Deploy
-      uses: takubokudori/deploy-webdeploy@v1
-      with:
-        website-name: ${{ secrets.WEBDEPLOY_SITE }}
-        publish-url: ${{ secrets.WEBDEPLOY_URL }}
-        username: ${{ secrets.WEBDEPLOY_USERNAME }}
-        password: ${{ secrets.WEBDEPLOY_PASSWORD }}
-        package: ./publish
-        options: "-verbose -allowUntrusted"
+    - name: Web Deploy to MonsterASP
+      run: |
+        $publishUrl = "${{ secrets.WEBDEPLOY_URL }}" 
+        $userName = "${{ secrets.WEBDEPLOY_USERNAME }}" 
+        $password = "${{ secrets.WEBDEPLOY_PASSWORD }}" 
+        $siteName = "${{ secrets.WEBDEPLOY_SITE }}"
+        $sourcePath = "${{ github.workspace }}\publish"
+
+        # Викликаємо msdeploy.exe
+        & "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe" `
+            -verb:sync `
+            -source:contentPath=$sourcePath `
+            -dest:contentPath=$siteName,ComputerName=$publishUrl,UserName=$userName,Password=$password,AuthType='Basic' `
+            -enableRule:AppOffline `
+            -allowUntrusted `
+            -verbose
