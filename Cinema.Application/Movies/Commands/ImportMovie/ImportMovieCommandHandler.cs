@@ -7,13 +7,15 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Data;
 using Cinema.Application.Common.Models.Tmdb;
+using Hangfire;
 
 namespace Cinema.Application.Movies.Commands.ImportMovie;
 
 public class ImportMovieCommandHandler(
     IApplicationDbContext context,
     ITmdbApi tmdbApi,               
-    IOptions<TmdbSettings> settings
+    IOptions<TmdbSettings> settings,
+    IBackgroundJobClient jobClient
     ) : IRequestHandler<ImportMovieCommand, Result<Guid>>
 {
     private readonly TmdbSettings _settings = settings.Value;
@@ -43,6 +45,7 @@ public class ImportMovieCommandHandler(
         if (dbContext == null) throw new InvalidOperationException("Context is not EF Core DbContext");
 
         var strategy = dbContext.Database.CreateExecutionStrategy();
+        var moviesToProcess = new List<Guid>();
 
         return await strategy.ExecuteAsync(async () =>
         {
@@ -93,6 +96,10 @@ public class ImportMovieCommandHandler(
                 await context.SaveChangesAsync(ct);
                 
                 await transaction.CommitAsync(ct);
+                foreach (var movieId in moviesToProcess)
+                {
+                    jobClient.Enqueue<IAiEmbeddingService>(s => s.UpdateMovieEmbeddingAsync(movieId, CancellationToken.None));
+                }
 
                 return Result.Success(movie.Id.Value);
             }

@@ -15,7 +15,6 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
-using Microsoft.EntityFrameworkCore;
 
 namespace Cinema.Api.Controllers;
 
