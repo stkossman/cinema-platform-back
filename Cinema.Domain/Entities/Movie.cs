@@ -1,6 +1,8 @@
 using Cinema.Domain.Common;
 using Cinema.Domain.Enums;
+using Cinema.Domain.Events;
 using Cinema.Domain.Exceptions;
+using Pgvector;
 
 namespace Cinema.Domain.Entities;
 
@@ -12,7 +14,7 @@ public class MovieCastMember
     public string? PhotoUrl { get; set; }
 }
 
-public class Movie
+public class Movie : BaseEntity
 {
     public EntityId<Movie> Id { get; private set; }
     public int? ExternalId { get; private set; }
@@ -33,17 +35,18 @@ public class Movie
 
     public ICollection<MovieGenre> MovieGenres { get; private set; } = [];
     public ICollection<Session> Sessions { get; private set; } = [];
+    public Vector? Embedding { get; private set; }
     
     private Movie() { }
 
     public static Movie CreateManual(
-        string title, 
-        string description, 
-        int durationMinutes, 
+        string title,
+        string description,
+        int durationMinutes,
         int releaseYear,
         MovieStatus status)
     {
-        return new Movie
+        var movie = new Movie
         {
             Id = new EntityId<Movie>(Guid.NewGuid()),
             Title = title,
@@ -54,6 +57,10 @@ public class Movie
             ExternalId = null,
             Rating = 0
         };
+        
+        movie.AddDomainEvent(new MovieCreatedEvent(movie));
+
+        return movie;
     }
     
     public void ChangeStatus(MovieStatus newStatus)
@@ -91,17 +98,17 @@ public class Movie
     }
 
     public static Movie Import(
-        int externalId, 
-        string title, 
-        string? description, 
-        int duration, 
-        decimal rating, 
-        DateTime? releaseDate, 
-        string? posterUrl, 
+        int externalId,
+        string title,
+        string? description,
+        int duration,
+        decimal rating,
+        DateTime? releaseDate,
+        string? posterUrl,
         string? backdropUrl,
         string? trailerUrl)
     {
-        return new Movie(
+        var movie = new Movie(
             EntityId<Movie>.New(),
             externalId,
             title,
@@ -113,6 +120,10 @@ public class Movie
             backdropUrl,
             trailerUrl
         );
+
+        movie.AddDomainEvent(new MovieCreatedEvent(movie));
+
+        return movie;
     }
     
     public void AddGenre(Genre genre)
@@ -142,5 +153,10 @@ public class Movie
         if (durationMinutes.HasValue) DurationMinutes = durationMinutes.Value;
         if (rating.HasValue) Rating = rating.Value;
         if (releaseYear.HasValue) ReleaseYear = releaseYear.Value;
+    }
+    
+    public void SetEmbedding(float[] embedding)
+    {
+        Embedding = new Vector(embedding);
     }
 }

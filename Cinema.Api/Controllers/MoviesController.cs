@@ -1,3 +1,4 @@
+using Cinema.Application.Common.Interfaces;
 using Cinema.Application.Movies.Commands.CreateMovie;
 using Cinema.Application.Movies.Commands.DeleteMovie;
 using Cinema.Application.Movies.Commands.ImportMovie;
@@ -5,6 +6,7 @@ using Cinema.Application.Movies.Commands.UpdateMovie.Commands;
 using Cinema.Application.Movies.Dtos;
 using Cinema.Application.Movies.Queries.GetMovieById;
 using Cinema.Application.Movies.Queries.GetMoviesWithPagination;
+using Cinema.Application.Movies.Queries.GetRecommendations;
 using Cinema.Application.Movies.Queries.SearchTmdb;
 using Cinema.Domain.Entities;
 using Cinema.Domain.Enums;
@@ -104,5 +106,15 @@ public class MoviesController : ApiController
     public async Task<IActionResult> Delete(Guid id)
     {
         return HandleResult(await Mediator.Send(new DeleteMovieCommand(id)));
+    }
+    
+    [HttpGet("recommendations")]
+    [Authorize]
+    public async Task<IActionResult> GetRecommendations([FromQuery] int count = 5)
+    {
+        var query = new GetPersonalizedRecommendationsQuery(count);
+        var result = await Mediator.Send(query);
+
+        return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Error);
     }
 }

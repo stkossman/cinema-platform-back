@@ -18,6 +18,7 @@ public static class ConfigurePersistenceServices
         var connectionString = configuration.GetConnectionString("DefaultConnection");
         var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
         dataSourceBuilder.EnableDynamicJson();
+        dataSourceBuilder.UseVector();
         var dataSource = dataSourceBuilder.Build();
         
         services.AddSingleton(dataSource);
