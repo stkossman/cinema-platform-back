@@ -14,20 +14,26 @@ public class GenerateMovieEmbeddingHandler(
     public async Task Handle(MovieCreatedEvent notification, CancellationToken cancellationToken)
     {
         var movie = notification.Movie;
-
         var textToEmbed = $"Movie: {movie.Title}. Description: {movie.Description ?? "No description"}";
+        var result = await aiService.GenerateEmbeddingAsync(textToEmbed, cancellationToken);
 
-        try
+        if (result.IsFailure)
         {
-            var embedding = await aiService.GenerateEmbeddingAsync(textToEmbed, cancellationToken);
-            movie.SetEmbedding(embedding);
-            await context.SaveChangesAsync(cancellationToken);
+            logger.LogError("Failed to generate embedding for movie {Title}. Error: {ErrorCode} - {ErrorMessage}", 
+                movie.Title, result.Error.Code, result.Error.Description);
+            return;
+        }
+
+        try 
+        {
+            movie.SetEmbedding(result.Value);
             
+            await context.SaveChangesAsync(cancellationToken);
             logger.LogInformation("Embedding generated for movie {Title}", movie.Title);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to generate embedding for movie {Title}", movie.Title);
+            logger.LogError(ex, "Failed to save embedding for movie {Title}", movie.Title);
         }
     }
 }
