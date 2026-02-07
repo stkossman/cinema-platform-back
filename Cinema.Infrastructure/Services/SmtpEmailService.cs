@@ -11,7 +11,7 @@ public class SmtpEmailService(IOptions<SmtpSettings> options, ILogger<SmtpEmailS
 {
     private readonly SmtpSettings _settings = options.Value;
 
-    public async Task SendEmailAsync(string to, string subject, string body)
+    public async Task SendEmailAsync(string to, string subject, string body, byte[]? attachment = null, string? attachmentName = null)
     {
         try
         {
@@ -29,9 +29,14 @@ public class SmtpEmailService(IOptions<SmtpSettings> options, ILogger<SmtpEmailS
                 IsBodyHtml = true
             };
             mailMessage.To.Add(to);
+            
+            if (attachment != null && !string.IsNullOrEmpty(attachmentName))
+            {
+                mailMessage.Attachments.Add(new Attachment(new MemoryStream(attachment), attachmentName));
+            }
 
             await client.SendMailAsync(mailMessage);
-            logger.LogInformation("Email sent to {Email}", to);
+            logger.LogInformation("Email sent to {Email} with attachment: {HasAttachment}", to, attachment != null);
         }
         catch (Exception ex)
         {

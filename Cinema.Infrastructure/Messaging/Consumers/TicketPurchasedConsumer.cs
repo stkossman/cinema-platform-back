@@ -5,22 +5,39 @@ using Microsoft.Extensions.Logging;
 
 namespace Cinema.Infrastructure.Messaging.Consumers;
 
-public class TicketPurchasedConsumer(IEmailService emailService, ILogger<TicketPurchasedConsumer> logger) 
+public class TicketPurchasedConsumer(
+    IEmailService emailService, 
+    ITicketGenerator ticketGenerator,
+    ILogger<TicketPurchasedConsumer> logger) 
     : IConsumer<TicketPurchasedMessage>
 {
     public async Task Consume(ConsumeContext<TicketPurchasedMessage> context)
     {
         var msg = context.Message;
-        logger.LogInformation("Processing ticket notification for Order {OrderId}", msg.OrderId);
+        logger.LogInformation("🎫 Generating ticket PDF for Order {OrderId}...", msg.OrderId);
+
+        var pdfBytes = ticketGenerator.GenerateTicketPdf(msg);
+        var fileName = $"ticket_{msg.OrderId}.pdf";
 
         var emailBody = $@"
-            <h1>Hello {msg.UserName},</h1>
-            <p>You have successfully purchased tickets for <b>{msg.MovieTitle}</b>.</p>
-            <p>Session Date: {msg.SessionDate:f}</p>
-            <hr/>
-            <p><a href='{msg.TicketDownloadUrl}'>Download Tickets</a></p>
+            <div style='font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4;'>
+                <div style='max-width: 600px; margin: 0 auto; background-color: white; padding: 20px; border-radius: 8px;'>
+                    <h1 style='color: #333;'>Hello {msg.UserName}!</h1>
+                    <p style='font-size: 16px;'>Thank you for your purchase.</p>
+                    <p>Your tickets for <b>{msg.MovieTitle}</b> are attached to this email.</p>
+                    <p style='color: #666;'>See you at the cinema!</p>
+                </div>
+            </div>
         ";
-
-        await emailService.SendEmailAsync(msg.UserEmail, "Your Movie Tickets", emailBody);
+        
+        logger.LogInformation("📨 Sending email with PDF attachment to {Email}...", msg.UserEmail);
+        
+        await emailService.SendEmailAsync(
+            msg.UserEmail, 
+            $"Your Tickets - {msg.MovieTitle}", 
+            emailBody, 
+            pdfBytes, 
+            fileName
+        );
     }
 }
