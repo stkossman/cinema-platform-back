@@ -7,7 +7,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Data;
-using Cinema.Domain.Exceptions;
+using Cinema.Domain.Events;
 
 namespace Cinema.Application.Orders.Commands.CreateOrder;
 
@@ -17,6 +17,7 @@ public class CreateOrderCommandHandler(
     IPriceCalculator priceCalculator,
     IPaymentService paymentService,
     ISeatLockingService seatLockingService,
+    IPublisher publisher,
     ILogger<CreateOrderCommandHandler> logger
     ) : IRequestHandler<CreateOrderCommand, Result<Guid>>
 {
@@ -123,13 +124,13 @@ public class CreateOrderCommandHandler(
                 createdOrder.MarkAsFailed();
                 context.Orders.Update(createdOrder);
                 await context.SaveChangesAsync(ct);
-                
                 return Result.Failure<Guid>(new Error("Payment.Failed", paymentResult.ErrorMessage ?? "Payment declined."));
             }
 
             createdOrder.MarkAsPaid(paymentResult.TransactionId!);
             context.Orders.Update(createdOrder);
             await context.SaveChangesAsync(ct);
+            await publisher.Publish(new OrderPaidEvent(createdOrder), ct);
 
             _ = Task.Run(async () => 
             {
