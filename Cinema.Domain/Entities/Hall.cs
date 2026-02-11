@@ -10,6 +10,7 @@ public class Hall
     public string Name { get; private set; }
     public int TotalCapacity { get; private set; }
     public bool IsActive { get; private set; } = true;
+    
     private readonly List<Seat> _seats = new();
     public IReadOnlyCollection<Seat> Seats => _seats.AsReadOnly();
 
@@ -32,33 +33,20 @@ public class Hall
             
         return new Hall(id, name);
     }
-    
-    public void GenerateSeatsGrid(int rows, int seatsPerRow, EntityId<SeatType> defaultSeatTypeId)
-    {
-        if (_seats.Any()) 
-            throw new DomainException("Cannot generate grid for a hall that already has seats.");
 
-        for (int row = 1; row <= rows; row++)
-        {
-            for (int number = 1; number <= seatsPerRow; number++)
-            {
-                var seatId = new EntityId<Seat>(Guid.NewGuid());
-                
-                var seat = Seat.New(
-                    seatId,
-                    rowLabel: row.ToString(),
-                    number: number,
-                    gridX: number,
-                    gridY: row,
-                    status: SeatStatus.Active,
-                    hallId: this.Id,
-                    seatTypeId: defaultSeatTypeId
-                );
-                
-                _seats.Add(seat);
-            }
-        }
-        
+    public void ApplyLayout(IEnumerable<Seat> seats)
+    {
+        if (_seats.Count != 0) 
+            throw new DomainException("Cannot apply layout for a hall that already has seats.");
+
+        var seatList = seats.ToList();
+        if (seatList.Count == 0)
+            throw new DomainException("Cannot apply an empty seat layout.");
+
+        if (seatList.Any(s => s.HallId != this.Id))
+             throw new DomainException("One or more seats belong to a different hall.");
+
+        _seats.AddRange(seatList);
         RecalculateCapacity();
     }
 

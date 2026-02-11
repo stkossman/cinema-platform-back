@@ -77,29 +77,6 @@ public class ApplicationDbContextInitializer
             await _context.SaveChangesAsync();
         }
         
-        if (!await _context.Halls.AnyAsync())
-        {
-            _logger.LogInformation("Seeding Halls...");
-
-            var standardType = await _context.SeatTypes.FirstAsync(st => st.Name == "Standard");
-            var vipType = await _context.SeatTypes.FirstAsync(st => st.Name == "VIP");
-            
-            var grandHall = Hall.Create(EntityId<Hall>.New(), "IMAX Hall 1");
-
-            grandHall.GenerateSeatsGrid(8, 12, standardType.Id);
-
-            foreach (var seat in grandHall.Seats.Where(s => int.Parse(s.RowLabel) >= 7))
-            {
-                seat.ChangeType(vipType.Id);
-            }
-
-            var cozyHall = Hall.Create(EntityId<Hall>.New(), "Cozy Hall 2");
-            cozyHall.GenerateSeatsGrid(5, 8, standardType.Id);
-
-            await _context.Halls.AddRangeAsync(grandHall, cozyHall);
-            await _context.SaveChangesAsync();
-        }
-        
         if (!await _context.Pricings.AnyAsync())
         {
             _logger.LogInformation("Seeding Pricings...");

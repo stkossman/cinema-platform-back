@@ -10,46 +10,67 @@ public class CancelExpiredOrdersJob(
     ISeatLockingService seatLockingService,
     ILogger<CancelExpiredOrdersJob> logger)
 {
+    private const int BatchSize = 100;
+
     public async Task Process(CancellationToken ct)
     {
+        logger.LogInformation("Starting CancelExpiredOrdersJob...");
+        
         var timeoutThreshold = DateTime.UtcNow.AddMinutes(-15);
-        
-        var expiredOrdersData = await context.Orders
-            .Where(o => o.Status == OrderStatus.Pending && o.BookingDate < timeoutThreshold)
-            .Select(o => new { o.Id, o.SessionId, o.UserId })
-            .ToListAsync(ct);
 
-        if (!expiredOrdersData.Any()) return;
+        bool hasMore = true;
+        int totalProcessed = 0;
 
-        logger.LogInformation("Found {Count} expired orders.", expiredOrdersData.Count);
-        
-        foreach (var orderData in expiredOrdersData)
+        while (hasMore)
         {
-            try 
+            var expiredOrdersBatch = await context.Orders
+                .Include(o => o.Tickets)
+                .Where(o => o.Status == OrderStatus.Pending && o.BookingDate < timeoutThreshold)
+                .Take(BatchSize)
+                .ToListAsync(ct);
+
+            if (expiredOrdersBatch.Count == 0)
             {
-                var order = await context.Orders
-                    .Include(o => o.Tickets)
-                    .FirstOrDefaultAsync(o => o.Id == orderData.Id, ct);
+                hasMore = false;
+                break;
+            }
 
-                if (order == null || order.Status != OrderStatus.Pending) continue;
-
-                order.MarkAsCancelled();
-                await context.SaveChangesAsync(ct);
-                
-                var sessionIdValue = orderData.SessionId.Value;
-
-                foreach (var ticket in order.Tickets)
+            foreach (var order in expiredOrdersBatch)
+            {
+                try
                 {
-                    await seatLockingService.UnlockSeatAsync(
-                        sessionIdValue, 
-                        ticket.SeatId.Value, 
-                        orderData.UserId);
+                    if (order.Tickets != null)
+                    {
+                        foreach (var ticket in order.Tickets)
+                        {
+                            await seatLockingService.UnlockSeatAsync(
+                                order.SessionId.Value, 
+                                ticket.SeatId.Value, 
+                                order.UserId, 
+                                ct);
+                        }
+                    }
+
+                    order.MarkAsCancelled();
+                    
+                    logger.LogInformation("Marked order {OrderId} as cancelled (expired).", order.Id.Value);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Failed to process expiration for order {OrderId}", order.Id.Value);
                 }
             }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to cancel order {OrderId}", orderData.Id);
-            }
+            
+            await context.SaveChangesAsync(ct);
+            
+            totalProcessed += expiredOrdersBatch.Count;
+
+            context.ClearChangeTracker();
+        }
+
+        if (totalProcessed > 0)
+        {
+            logger.LogInformation("CancelExpiredOrdersJob completed. Total cancelled: {Count}", totalProcessed);
         }
     }
 }

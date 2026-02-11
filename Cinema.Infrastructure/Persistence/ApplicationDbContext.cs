@@ -1,7 +1,7 @@
 using System.Reflection;
 using Cinema.Application.Common.Interfaces;
 using Cinema.Domain.Entities;
-using Cinema.Infrastructure.Persistence.Converters; // Якщо використовуєш конвертери
+using Cinema.Infrastructure.Persistence.Converters;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -52,5 +52,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
         base.OnModelCreating(modelBuilder);
+    }
+    
+    public void ClearChangeTracker()
+    {
+        base.ChangeTracker.Clear();
     }
 }
