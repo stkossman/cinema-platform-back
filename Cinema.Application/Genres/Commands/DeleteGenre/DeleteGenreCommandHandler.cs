@@ -1,4 +1,6 @@
 using Cinema.Application.Common.Interfaces;
+using Cinema.Domain.Common;
+using Cinema.Domain.Entities;
 using Cinema.Domain.Shared;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -10,11 +12,13 @@ public class DeleteGenreCommandHandler(IApplicationDbContext context)
 {
     public async Task<Result> Handle(DeleteGenreCommand request, CancellationToken ct)
     {
-        var genre = await context.Genres
-            .FirstOrDefaultAsync(g => g.ExternalId == request.ExternalId, ct);
+        var genreId = new EntityId<Genre>(request.Id);
 
-        if (genre == null) return Result.Failure(new Error("Genre.NotFound", "Genre not found"));
+        var genre = await context.Genres.FirstOrDefaultAsync(g => g.Id == genreId, ct);
 
+        if (genre == null) 
+            return Result.Failure(new Error("Genre.NotFound", "Genre not found"));
+        
         context.Genres.Remove(genre);
         await context.SaveChangesAsync(ct);
         
