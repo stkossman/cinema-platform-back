@@ -2,6 +2,7 @@
 using System.Text.Json;
 using Cinema.Application.Common.Interfaces;
 using Cinema.Application.Common.Settings;
+using Cinema.Application.Services;
 using Cinema.Domain.Entities;
 using Cinema.Domain.Interfaces;
 using Cinema.Infrastructure.Messaging.Consumers;
@@ -271,6 +272,7 @@ private static IServiceCollection AddExternalServices(this IServiceCollection se
         services.AddTransient<IIdentityService, IdentityService>();
         services.AddTransient<IUserService, UserService>();
         services.AddScoped<IMovieInfoProvider, EfMovieInfoProvider>();
+        services.AddScoped<IOrderReservationService, OrderReservationService>();
 
         return services;
     }
