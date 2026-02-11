@@ -201,40 +201,61 @@ public static class ConfigureInfrastructureServices
         return services;
     }
 
-    private static IServiceCollection AddExternalServices(this IServiceCollection services, IConfiguration configuration)
+private static IServiceCollection AddExternalServices(this IServiceCollection services, IConfiguration configuration)
     {
-        // TMDB (Refit)
+        // 1. TMDB Service (Refit)
         services.Configure<TmdbSettings>(configuration.GetSection(TmdbSettings.SectionName));
-
-        var refitSettings = new RefitSettings
+        
+        var tmdbRefitSettings = new RefitSettings
         {
             ContentSerializer = new SystemTextJsonContentSerializer(new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
                 PropertyNameCaseInsensitive = true,
-                WriteIndented = false
+                WriteIndented = true
             })
         };
 
-        services.AddRefitClient<ITmdbApi>(refitSettings)
-            .ConfigureHttpClient((sp, c) =>
+        services.AddRefitClient<ITmdbApi>(tmdbRefitSettings)
+            .ConfigureHttpClient((sp, client) =>
             {
                 var settings = sp.GetRequiredService<IOptions<TmdbSettings>>().Value;
-                c.BaseAddress = new Uri(settings.BaseUrl);
+                
+                if (!string.IsNullOrEmpty(settings.BaseUrl))
+                {
+                    client.BaseAddress = new Uri(settings.BaseUrl);
+                }
             })
             .AddStandardResilienceHandler();
 
-        // Gemini AI (Typed HttpClient)
+        services.AddScoped<ITmdbService, TmdbService>();
+
+        
+        // 2. Gemini AI Service (Refit)
         services.Configure<GeminiOptions>(configuration.GetSection(GeminiOptions.SectionName));
 
-        services.AddHttpClient<IAiEmbeddingService, GeminiEmbeddingService>((sp, client) =>
+        var geminiRefitSettings = new RefitSettings
         {
-            var settings = sp.GetRequiredService<IOptions<GeminiOptions>>().Value;
-            if (!string.IsNullOrEmpty(settings.BaseUrl))
+            ContentSerializer = new SystemTextJsonContentSerializer(new JsonSerializerOptions
             {
-                client.BaseAddress = new Uri(settings.BaseUrl);
-            }
-        });
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                PropertyNameCaseInsensitive = true
+            })
+        };
+
+        services.AddRefitClient<IGeminiApi>(geminiRefitSettings)
+            .ConfigureHttpClient((sp, client) =>
+            {
+                var settings = sp.GetRequiredService<IOptions<GeminiOptions>>().Value;
+
+                if (!string.IsNullOrEmpty(settings.BaseUrl))
+                {
+                    client.BaseAddress = new Uri(settings.BaseUrl);
+                }
+            })
+            .AddStandardResilienceHandler();
+
+        services.AddScoped<IAiEmbeddingService, GeminiEmbeddingService>();
 
         return services;
     }
