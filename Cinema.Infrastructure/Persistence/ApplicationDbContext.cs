@@ -1,7 +1,7 @@
 using System.Reflection;
 using Cinema.Application.Common.Interfaces;
 using Cinema.Domain.Entities;
-using Cinema.Infrastructure.Persistence.Converters; // Якщо використовуєш конвертери
+using Cinema.Infrastructure.Persistence.Converters;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
