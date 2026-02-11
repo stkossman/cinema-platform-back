@@ -24,4 +24,5 @@ public interface IApplicationDbContext
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
     DatabaseFacade Database { get; }
     Task<IDbContextTransaction> BeginTransactionAsync(IsolationLevel serializable, CancellationToken cancellationToken);
+    void ClearChangeTracker();
 }

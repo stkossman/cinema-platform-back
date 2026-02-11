@@ -53,4 +53,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
         base.OnModelCreating(modelBuilder);
     }
+    
+    public void ClearChangeTracker()
+    {
+        base.ChangeTracker.Clear();
+    }
 }
