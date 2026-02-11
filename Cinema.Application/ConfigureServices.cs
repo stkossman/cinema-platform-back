@@ -1,6 +1,7 @@
 using System.Reflection;
 using Cinema.Application.Common.Behaviours;
 using Cinema.Application.Services;
+using Cinema.Domain.Services;
 using FluentValidation;
 using Mapster;
 using MapsterMapper;
@@ -32,6 +33,7 @@ public static class ConfigureServices
         services.AddSingleton(config);
         services.AddScoped<IMapper, ServiceMapper>();
         services.AddScoped<SessionSchedulingService>();
+        services.AddScoped<SeatLayoutService>();
         return services;
     }
 }

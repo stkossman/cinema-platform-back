@@ -1,13 +1,16 @@
 using Cinema.Application.Common.Interfaces;
 using Cinema.Domain.Common;
 using Cinema.Domain.Entities;
+using Cinema.Domain.Services;
 using Cinema.Domain.Shared;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cinema.Application.Halls.Commands.CreateHall;
 
-public class CreateHallCommandHandler(IApplicationDbContext context) 
+public class CreateHallCommandHandler(
+    IApplicationDbContext context,
+    SeatLayoutService layoutService)
     : IRequestHandler<CreateHallCommand, Result<Guid>>
 {
     public async Task<Result<Guid>> Handle(CreateHallCommand request, CancellationToken cancellationToken)
@@ -19,7 +22,7 @@ public class CreateHallCommandHandler(IApplicationDbContext context)
         {
             return Result.Failure<Guid>(new Error("Hall.NameExists", $"Hall with name '{request.Name}' already exists."));
         }
-
+        
         var seatTypeId = new EntityId<SeatType>(request.SeatTypeId);
         var typeExists = await context.SeatTypes.AnyAsync(x => x.Id == seatTypeId, cancellationToken);
         if (!typeExists) 
@@ -40,9 +43,15 @@ public class CreateHallCommandHandler(IApplicationDbContext context)
 
         var hallId = new EntityId<Hall>(Guid.NewGuid());
         var hall = Hall.Create(hallId, request.Name);
-
-        hall.GenerateSeatsGrid(request.Rows, request.SeatsPerRow, seatTypeId);
         
+        var seats = layoutService.GenerateRectangularGrid(
+            request.Rows, 
+            request.SeatsPerRow, 
+            hallId, 
+            seatTypeId);
+        
+        hall.ApplyLayout(seats);
+
         if (request.TechnologyIds.Any())
         {
             var techIds = request.TechnologyIds.Select(g => new EntityId<Technology>(g));
