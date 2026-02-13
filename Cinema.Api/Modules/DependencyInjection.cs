@@ -55,10 +55,7 @@ public static class DependencyInjection
         services.AddDataProtection();
         
         services.AddScoped<ICurrentUserService, CurrentUserService>();
-
-        services.AddSingleton<TicketNotificationWorker>();
-        services.AddHostedService(sp => sp.GetRequiredService<TicketNotificationWorker>());
-        services.AddSingleton<ITicketNotifier>(sp => sp.GetRequiredService<TicketNotificationWorker>());
+        services.AddTransient<ITicketNotifier, SignalRTicketNotifier>();
         services.AddScoped<IAnalyticsService, AnalyticsService>();
         services.AddSignalR();
 
