@@ -27,7 +27,6 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<PricingItem> PricingItems { get; init; }
     public DbSet<Order> Orders { get; init; }
     public DbSet<Ticket> Tickets { get; init; }
-    public DbSet<SeatLock> SeatLocks { get; init; }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
