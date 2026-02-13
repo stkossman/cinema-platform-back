@@ -1,3 +1,4 @@
+using Cinema.Application.Halls.Dtos;
 using Cinema.Domain.Common;
 using Cinema.Domain.Enums;
 
@@ -8,10 +9,10 @@ public record SessionSeatsVm(
     Guid HallId,
     string MovieTitle,
     DateTime StartTime,
-    List<SeatDto> Seats
+    List<SessionSeatDto> Seats
 );
 
-public record SeatDto(
+public record SessionSeatDto(
     Guid Id,
     int Row,
     int Number,

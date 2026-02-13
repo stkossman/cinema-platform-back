@@ -1,5 +1,4 @@
 using Cinema.Application.Common.Interfaces;
-using Cinema.Application.Sessions.Queries.GetSessionSeats; // Перевір namespace DTO
 using Cinema.Domain.Common;
 using Cinema.Domain.Entities;
 using Cinema.Domain.Enums;
@@ -60,7 +59,7 @@ public class GetSessionSeatsQueryHandler(
         if (pricing == null)
             return Result.Failure<SessionSeatsVm>(new Error("Pricing.NotFound", "Pricing not configured"));
 
-        var seatDtos = new List<SeatDto>(seats.Count);
+        var seatDtos = new List<SessionSeatDto>(seats.Count);
         var priceCache = new Dictionary<EntityId<SeatType>, decimal>();
 
         foreach (var seat in seats)
@@ -76,7 +75,7 @@ public class GetSessionSeatsQueryHandler(
             
             var typeName = seatTypeProvider.GetName(seat.SeatTypeId);
 
-            seatDtos.Add(new SeatDto(
+            seatDtos.Add(new SessionSeatDto(
                 seat.Id.Value,
                 seat.GridX,
                 seat.Number,
