@@ -94,6 +94,8 @@ public static class DependencyInjection
                 Version = "v1",
                 Description = "Cinema Platform API"
             });
+            
+            c.CustomSchemaIds(type => type.ToString().Replace("+", "."));
 
             c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
             {

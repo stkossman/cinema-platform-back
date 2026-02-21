@@ -18,6 +18,7 @@ public class RedisSeatLockingService : ISeatLockingService
     private static readonly TimeSpan LockDuration = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan ExtensionDuration = TimeSpan.FromMinutes(5);
     private const string KeyPrefix = "lock:session";
+    private const string SetPrefix = "locked_seats:session";
     
     private const string ValidateAndExtendScript = @"
         if redis.call('get', KEYS[1]) == ARGV[1] then
@@ -33,7 +34,8 @@ public class RedisSeatLockingService : ISeatLockingService
             return 0
         end";
 
-    private string GetKey(Guid sessionId, Guid seatId) => $"{KeyPrefix}:{sessionId}:{seatId}";
+    private string GetKey(Guid sessionId, Guid seatId) => $"{KeyPrefix}:{{{sessionId}}}:{seatId}";
+    private string GetSetKey(Guid sessionId) => $"{SetPrefix}:{{{sessionId}}}";
 
     public RedisSeatLockingService(
         IConnectionMultiplexer redis,
@@ -62,20 +64,36 @@ public class RedisSeatLockingService : ISeatLockingService
 
     public async Task<IEnumerable<Guid>> GetLockedSeatsBySessionAsync(Guid sessionId, CancellationToken ct = default)
     {
-        var server = _redis.GetServer(_redis.GetEndPoints().First());
-        var pattern = $"{KeyPrefix}:{sessionId}:*";
-        var lockedSeatIds = new List<Guid>();
+       var setKey = GetSetKey(sessionId);
 
-        await foreach (var key in server.KeysAsync(pattern: pattern))
-        {
-            var parts = key.ToString().Split(':');
-            if (parts.Length == 4 && Guid.TryParse(parts[3], out var seatId))
-            {
-                lockedSeatIds.Add(seatId);
-            }
-        }
-        
-        return lockedSeatIds;
+       try
+       {
+           var seatIdsInSet = await _resiliencePipeline.ExecuteAsync(async token => 
+               await _db.SetMembersAsync(setKey), ct);
+           
+           if (seatIdsInSet.Length == 0) return [];
+           
+           var keys = seatIdsInSet.Select(id => new RedisKey(GetKey(sessionId, Guid.Parse(id.ToString())))).ToArray();
+           var values = await _resiliencePipeline.ExecuteAsync(async token => await _db.StringGetAsync(keys), ct);
+           
+           var activeSeats = new List<Guid>();
+           var expiredSeats = new List<RedisValue>();
+
+           for (var i = 0; i < values.Length; i++)
+           {
+               if(values[i].HasValue) activeSeats.Add(Guid.Parse(seatIdsInSet[i].ToString()));
+               else expiredSeats.Add(seatIdsInSet[i]);
+           }
+           
+           if(expiredSeats.Count > 0) await _db.SetRemoveAsync(setKey, expiredSeats.ToArray());
+           return activeSeats;
+           
+       }
+       catch (Exception e)
+       {
+           _logger.LogError(e, "Redis error while getting locked seats for session {SessionId}", sessionId);
+           return [];
+       }
     }
     
     public async Task<Result> LockSeatAsync(Guid sessionId, Guid seatId, Guid userId, CancellationToken ct = default)
@@ -90,12 +108,7 @@ public class RedisSeatLockingService : ISeatLockingService
 
             if (isLocked)
             {
-                var currentLockValue = await _db.StringGetAsync(key);
-                if (currentLockValue == value)
-                {
-                    await _db.KeyExpireAsync(key, LockDuration);
-                    return Result.Success();
-                }
+                await _db.SetAddAsync(GetSetKey(sessionId), seatId.ToString());
 
                 try
                 {
@@ -103,16 +116,16 @@ public class RedisSeatLockingService : ISeatLockingService
                 }
                 catch (Exception e)
                 {
-                    _logger.LogWarning(e, "Lock was successful, but notification failed for seat {SeatId}", seatId);
+                    _logger.LogWarning(e, "Notification failed on lock");
                 }
                 
-                var exented = await ValidateAndExtendLockAsync(sessionId, seatId, userId, ct);
-                if (exented) return Result.Success();
-                
-                return Result.Failure(new Error("Seat.Locked", "Seat is already reserved by another user."));
+                return Result.Success();
             }
 
-            return Result.Success();
+            var exended = await ValidateAndExtendLockAsync(sessionId, seatId, userId, ct);
+            if (exended) return Result.Success();
+            
+            return Result.Failure(new Error("Seat.AlreadyLocked", "Seat is already locked."));
         }
         catch (Exception ex)
         {
@@ -130,7 +143,7 @@ public class RedisSeatLockingService : ISeatLockingService
         {
             var result = await _db.ScriptEvaluateAsync(ValidateAndExtendScript, 
                 keys: [new RedisKey(key)], 
-                values: [userValue, ExtensionDuration.TotalSeconds]);
+                values: [userValue, (int)ExtensionDuration.TotalSeconds]);
 
             return (int)result == 1;
         }
@@ -152,8 +165,18 @@ public class RedisSeatLockingService : ISeatLockingService
             
             if (!result.IsNull && (int)result == 1)
             {
+                await _db.SetRemoveAsync(GetSetKey(sessionId), seatId.ToString());
+                
                 _logger.LogInformation("Seat {SeatId} unlocked by user {UserId}", seatId, userId);
-                await _notifier.NotifySeatUnlockedAsync(sessionId, seatId, ct);
+
+                try
+                {
+                    await _notifier.NotifySeatUnlockedAsync(sessionId, seatId, ct);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogWarning(e, "Notification failed on unlock");
+                }
             }
             
             return Result.Success();
@@ -183,30 +206,27 @@ public class RedisSeatLockingService : ISeatLockingService
     
     public async Task<IEnumerable<Guid>> GetLockedSeatsAsync(Guid sessionId, IEnumerable<Guid> seatIds, CancellationToken ct = default)
     {
-        var batch = _db.CreateBatch();
-    
-        var tasks = new List<(Guid SeatId, Task<RedisValue> Task)>();
+        var seatIdArray = seatIds.ToArray();
+        var keys = seatIdArray.Select(id => new RedisKey(GetKey(sessionId, id))).ToArray();
 
-        foreach (var seatId in seatIds)
+        try
         {
-            var key = GetKey(sessionId, seatId);
-            tasks.Add((seatId, batch.StringGetAsync(key)));
-        }
-
-        batch.Execute();
-
-        await Task.WhenAll(tasks.Select(x => x.Task));
-
-        var lockedSeats = new List<Guid>();
-
-        foreach (var (seatId, task) in tasks)
-        {
-            if (task.Result.HasValue)
+            var values = await _resiliencePipeline.ExecuteAsync(async token =>
+                await _db.StringGetAsync(keys), ct);
+            
+            var lockedSeats = new List<Guid>();
+            
+            for (var i = 0; i < values.Length; i++)
             {
-                lockedSeats.Add(seatId);
+                if (values[i].HasValue) lockedSeats.Add(seatIdArray[i]);
             }
+            
+            return lockedSeats;
         }
-
-        return lockedSeats;
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Redis error while getting locked seats for session {SessionId}", sessionId);
+            return [];
+        }
     }
 }
