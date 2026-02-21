@@ -88,7 +88,7 @@ public class RedisSeatLockingService : ISeatLockingService
             var isLocked = await _resiliencePipeline.ExecuteAsync(async token =>
                 await _db.StringSetAsync(key, value, LockDuration, When.NotExists), ct);
 
-            if (!isLocked)
+            if (isLocked)
             {
                 var currentLockValue = await _db.StringGetAsync(key);
                 if (currentLockValue == value)
@@ -96,8 +96,18 @@ public class RedisSeatLockingService : ISeatLockingService
                     await _db.KeyExpireAsync(key, LockDuration);
                     return Result.Success();
                 }
+
+                try
+                {
+                    await _notifier.NotifySeatLockedAsync(sessionId, seatId, userId, ct);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogWarning(e, "Lock was successful, but notification failed for seat {SeatId}", seatId);
+                }
                 
-                await _notifier.NotifySeatLockedAsync(sessionId, seatId, userId, ct);
+                var exented = await ValidateAndExtendLockAsync(sessionId, seatId, userId, ct);
+                if (exented) return Result.Success();
                 
                 return Result.Failure(new Error("Seat.Locked", "Seat is already reserved by another user."));
             }
