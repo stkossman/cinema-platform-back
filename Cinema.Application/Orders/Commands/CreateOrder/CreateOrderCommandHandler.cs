@@ -75,13 +75,10 @@ public class CreateOrderCommandHandler(
         
         await publisher.Publish(new OrderPaidEvent(order), ct);
 
-        _ = Task.Run(async () => 
+        foreach (var seatId in seatIds)
         {
-            foreach (var seatId in seatIds)
-            {
-                await seatLockingService.UnlockSeatAsync(sessionId, seatId, userId, default);
-            }
-        });
+           await seatLockingService.UnlockSeatAsync(sessionId, seatId, userId, ct);
+        }
         
         return Result.Success(order.Id.Value);
     }
